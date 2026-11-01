@@ -102,14 +102,14 @@ export function createDeliveryUI(ctx) {
     if(target.dataset.evolution){
       const d=catalog().find(d=>d.id===target.dataset.documentId);if(!d)return;
       try {
-        if(target.dataset.evolution==='preview'&&d.availability==='pending')return ctx.eventDetail(d.eventId);
-        if(target.dataset.evolution==='preview'&&d.kind==='history')return ctx.historyDocument(d.eventId);
+        if(target.dataset.evolution==='preview'&&d.availability==='pending')return await ctx.eventDetail(d.eventId);
+        if(target.dataset.evolution==='preview'&&d.kind==='history')return await ctx.historyDocument(d.eventId);
         if(target.dataset.evolution==='preview')return d.kind==='payment'?ctx.receiptModal(d.paymentId):await ctx.showIncome(d.year);
         if(target.dataset.evolution==='download'){download(filename(d),await standalone(await documentHTML(d)),'text/html;charset=utf-8');toast('Documento fictício baixado.');}
       }catch(e){toast(e.message);}return;
     }
     if(target.id==='swap-payments'){const a=$('#compare-before').value,b=$('#compare-after').value;compareSelection={before:b,after:a};$('#compare-before').value=b;$('#compare-after').value=a;$('#comparison-result').innerHTML=comparisonResult();}
-    if(target.id==='clear-documents'){filters={year:'',month:'',kind:'',query:''};$('#main').innerHTML=await documentsPage();}
+    if(target.id==='clear-documents'){filters={year:'',month:'',kind:'',query:''};try{$('#main').innerHTML=await documentsPage();}catch(e){toast(e.message);}}
     if(target.id==='clear-selection'){selected.clear();$('#documents-result').innerHTML=documentRows();}
     if(target.id==='download-selected')await batchDownload(target);
   }

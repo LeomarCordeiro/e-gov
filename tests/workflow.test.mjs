@@ -9,12 +9,15 @@ const event={id:'event-1',date:'2026-10-01',type:'Progressão',title:'Progressã
 const context=api=>({safe,api,icon:()=>'',link:()=>'',heading:(title,description='',actions='')=>title+description+actions,money:String,rolePanel:()=>'',contractSummary:()=>'',contractTabs:()=>'',getPayments:()=>[]});
 
 test('central documents prevents selecting and downloading an unreleased document',async()=>{
-  const ui=createDeliveryUI(context(async()=>[pending]));
+  let error='';
+  const ui=createDeliveryUI({...context(async()=>[pending]),eventDetail:async()=>{throw new Error('Consulta indisponível');},toast:message=>error=message});
   const html=await ui.documentsPage();
   assert.match(html,/Ainda não liberado/);assert.match(html,/Ver pendência/);
   assert.match(html,/class="document-select"[^>]*disabled/);
   assert.match(html,/<button disabled[^>]*data-evolution="download"/);
   assert.doesNotMatch(html,/undefined/);
+  await ui.click({dataset:{evolution:'preview',documentId:pending.id}});
+  assert.equal(error,'Consulta indisponível');
 });
 
 test('history links the event context and explains pending release without exposing content',async()=>{
