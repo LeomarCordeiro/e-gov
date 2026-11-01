@@ -1,0 +1,437 @@
+{
+  "browser": {
+    "mode": "launch",
+    "executable_path": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+    "headless": true
+  },
+  "start_url": {
+    "url": "http://127.0.0.1:4173/governo-digital/servidor"
+  },
+  "environment": {
+    "viewport": {
+      "width": 1285,
+      "height": 959
+    },
+    "locale": "pt-BR",
+    "timezone": "America/Sao_Paulo"
+  },
+  "actions": [
+    {
+      "step_id": "dashboard-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".payment-card"
+      }
+    },
+    {
+      "step_id": "open-payments",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": ".service-link[data-route=\"holerites\"]"
+      }
+    },
+    {
+      "step_id": "payments-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".payslip"
+      }
+    },
+    {
+      "step_id": "expand-payment",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": ".payslip:first-child summary"
+      }
+    },
+    {
+      "step_id": "receipt-items",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".payslip:first-child .receipt-details"
+      }
+    },
+    {
+      "step_id": "receipt-dialog",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": ".payslip:first-child [data-receipt]"
+      }
+    },
+    {
+      "step_id": "receipt-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "#modal[open] [data-print-receipt]"
+      }
+    },
+    {
+      "step_id": "close-receipt",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#close-modal"
+      }
+    },
+    {
+      "step_id": "empty-month",
+      "action": "select_option",
+      "timeout_ms": 10000,
+      "value": {
+        "source": "literal",
+        "value": "12"
+      },
+      "locator": {
+        "kind": "css",
+        "selector": "#month"
+      }
+    },
+    {
+      "step_id": "apply-empty-filters",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#payment-filters button[type=\"submit\"]"
+      }
+    },
+    {
+      "step_id": "empty-result",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "#payment-results .empty"
+      }
+    },
+    {
+      "step_id": "clear-filters",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#clear-filters"
+      }
+    },
+    {
+      "step_id": "pagination-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "#load-more"
+      }
+    },
+    {
+      "step_id": "load-next-page",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#load-more"
+      }
+    },
+    {
+      "step_id": "page-two",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".payslip:nth-child(24)"
+      }
+    },
+    {
+      "step_id": "functional-history",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": ".tabs [data-route=\"history\"]"
+      }
+    },
+    {
+      "step_id": "history-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".timeline-item"
+      }
+    },
+    {
+      "step_id": "income-page",
+      "action": "goto",
+      "timeout_ms": 10000,
+      "destination": {
+        "url": "http://127.0.0.1:4173/governo-digital/servidor/comprovante-rendimento"
+      },
+      "wait_until": "load"
+    },
+    {
+      "step_id": "income-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".income-year"
+      }
+    },
+    {
+      "step_id": "emit-income",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "[data-income=\"2026\"]"
+      }
+    },
+    {
+      "step_id": "income-document",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "#modal[open] [data-csv=\"2026\"]"
+      }
+    },
+    {
+      "step_id": "close-income",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#close-modal"
+      }
+    },
+    {
+      "step_id": "validation-page",
+      "action": "goto",
+      "timeout_ms": 10000,
+      "destination": {
+        "url": "http://127.0.0.1:4173/governo-digital/oxy/validar-autenticacao-relatorios"
+      },
+      "wait_until": "load"
+    },
+    {
+      "step_id": "validation-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "#verification-code"
+      }
+    },
+    {
+      "step_id": "fill-example",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#use-demo-code"
+      }
+    },
+    {
+      "step_id": "validate-code",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#verify-button"
+      }
+    },
+    {
+      "step_id": "valid-result",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".verify-result:not(.invalid)"
+      }
+    },
+    {
+      "step_id": "invalid-code",
+      "action": "fill",
+      "timeout_ms": 10000,
+      "value": {
+        "source": "literal",
+        "value": "NOT-A-REAL-CODE"
+      },
+      "locator": {
+        "kind": "css",
+        "selector": "#verification-code"
+      }
+    },
+    {
+      "step_id": "validate-invalid",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#verify-button"
+      }
+    },
+    {
+      "step_id": "invalid-result",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".verify-result.invalid"
+      }
+    },
+    {
+      "step_id": "search-dialog",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#open-search"
+      }
+    },
+    {
+      "step_id": "search-service",
+      "action": "fill",
+      "timeout_ms": 10000,
+      "value": {
+        "source": "literal",
+        "value": "vida"
+      },
+      "locator": {
+        "kind": "css",
+        "selector": "#service-search"
+      }
+    },
+    {
+      "step_id": "search-match",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "#search-results [data-route=\"history\"]"
+      }
+    },
+    {
+      "step_id": "search-navigation",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#search-results [data-route=\"history\"]"
+      }
+    },
+    {
+      "step_id": "search-destination",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".timeline"
+      }
+    },
+    {
+      "step_id": "accessibility-options",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#accessibility"
+      }
+    },
+    {
+      "step_id": "contrast-on",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#toggle-contrast"
+      }
+    },
+    {
+      "step_id": "contrast-enabled",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": "body.contrast"
+      }
+    },
+    {
+      "step_id": "contrast-reset",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#reset-accessibility"
+      }
+    },
+    {
+      "step_id": "close-accessibility",
+      "action": "click",
+      "timeout_ms": 10000,
+      "locator": {
+        "kind": "css",
+        "selector": "#close-modal"
+      }
+    },
+    {
+      "step_id": "return-home",
+      "action": "goto",
+      "timeout_ms": 10000,
+      "destination": {
+        "url": "http://127.0.0.1:4173/governo-digital/servidor"
+      },
+      "wait_until": "load"
+    },
+    {
+      "step_id": "final-dashboard",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".payment-card"
+      }
+    }
+  ],
+  "capture": {
+    "at_end": [
+      "screenshot",
+      "accessibility",
+      "url"
+    ],
+    "after_each_step": [
+      "accessibility"
+    ]
+  }
+}

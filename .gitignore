@@ -1,0 +1,13 @@
+.browser-profile/
+evidence/
+node_modules/
+.env*
+*.log
+target/
+.runtime/
+
+# Local REA investigation launcher and generated artifacts
+tools/rea-run.py
+*.zip
+*.dump
+*.sql.gz

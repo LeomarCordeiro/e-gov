@@ -1,0 +1,38 @@
+{
+  "browser": {
+    "mode": "launch",
+    "executable_path": "C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe",
+    "headless": true
+  },
+  "start_url": {
+    "url": "http://127.0.0.1:4173/governo-digital/servidor"
+  },
+  "environment": {
+    "viewport": {
+      "width": 1285,
+      "height": 959
+    },
+    "locale": "pt-BR",
+    "timezone": "America/Sao_Paulo"
+  },
+  "actions": [
+    {
+      "step_id": "dashboard-ready",
+      "action": "wait_for",
+      "timeout_ms": 10000,
+      "state": "visible",
+      "locator": {
+        "kind": "css",
+        "selector": ".payment-card"
+      }
+    }
+  ],
+  "capture": {
+    "at_end": [
+      "screenshot",
+      "accessibility",
+      "url"
+    ],
+    "after_each_step": []
+  }
+}

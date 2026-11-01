@@ -1,0 +1,20 @@
+name: arquimetria-portal
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: arquimetria_portal
+      POSTGRES_USER: arquimetria
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD no arquivo .env}
+    ports:
+      - "127.0.0.1:55437:5432"
+    volumes:
+      - portal_pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arquimetria -d arquimetria_portal"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+volumes:
+  portal_pgdata:
