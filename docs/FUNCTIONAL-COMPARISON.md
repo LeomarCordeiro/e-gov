@@ -27,7 +27,7 @@ A página original exibiu versão **8.4.11**. Os nomes de `main` e `runtime` car
 | Vida funcional como relatório | Item e abertura do visualizador observados nesta conta | Catálogo local e relatório do vínculo/vida funcional em HTML e impressão | Parcial: emissão simulada, gerador de PDF e conteúdo oficial não reproduzidos. |
 | Consignação | Margens, base e estado vazio declarados; aba não visível nesta conta | Valores fixos fictícios, grupos opcionais e competências de teste | Reconstrução orientada pelo código; execução original não verificada nesta conta. |
 | Relatórios genéricos | Lista do serviço, emissão e visualizador; um item disponível nesta conta | Catálogo local em aba própria e prévia/HTML/impressão | Parcial: apenas um relatório fictício, sem integração ao catálogo oficial. |
-| Avaliações funcionais | Listas, questionários e operações declaradas; aba não visível nesta conta | Não implementadas | Ausente; não confundir com pesquisa de satisfação. |
+| Avaliações funcionais | Listas, questionários e operações declaradas; aba não visível nesta conta | Núcleo local de questionário, rascunho, conclusão, leitura e ciência fictícios | Parcial: anexos, regras oficiais e fluxo parametrizado pendentes; não confundir com pesquisa de satisfação. |
 | Solicitações | Botão de acesso observado; etapas internas fora deste levantamento | Protocolos, mensagens, RH simulado e histórico | Evolução local; equivalência com o atendimento original desconhecida. |
 | Comparação de holerites e rubricas | Ausência no original não estabelecida | Comparação e memórias fictícias | Evolução local. |
 | Central de documentos e liberação simulada | Ausência no original não estabelecida | Busca, ZIP e documentos funcionais | Evolução local. |
@@ -59,7 +59,7 @@ O catálogo é fornecido pelo serviço; não é uma lista fixa recuperável apen
 
 A aba `avaliacoes`, condicionada a `OXY_AVALIACAO_FUNCIONAL`, instancia a lista quando é acessada. Os rótulos são **Pendentes**, **Minhas Concluídas** e **Respondidas**; nomes internos dos estados diferem dos rótulos. Há filtro por matrícula/nome nas listas aplicáveis, página inicial de 10 e opções de 10 a 50, carregamento e estado **Nenhuma avaliação encontrada**.
 
-Campos declarados: matrícula, funcionário, cargo, questionário, situação, início/fim de período, número da avaliação e início/fim de liberação. Ações incluem abrir questionário e emitir relatório conforme a seção. O questionário é carregado por chunk adicional **7858**, identificado no runtime, mas não analisado nesta etapa.
+Campos declarados: matrícula, funcionário, cargo, questionário, situação, início/fim de período, número da avaliação e início/fim de liberação. Ações incluem abrir questionário e emitir relatório conforme a seção. O questionário é carregado pelo chunk adicional **7858**. Ele foi analisado na entrega 5; detalhes e limites estão em [EVALUATIONS.md](EVALUATIONS.md).
 
 O serviço declara consultas separadas para pendentes, pessoais e concluídas; consulta por avaliação/fluxo; questionário de preenchimento e de visualização; operações `salvar-questionario`, `tramitar-fluxo` e `concordar`. Essas operações **não foram chamadas**. Regras de notas, permissões por avaliador, editabilidade, concordância e efeitos funcionais permanecem desconhecidos. A simulação futura deve ser explicitamente fictícia e independente dessas operações reais.
 
@@ -75,7 +75,7 @@ Não foram retidos no repositório dados pessoais da sessão, URLs com identific
 
 1. **Implementado localmente:** Relatórios com catálogo fictício, item de vida funcional, geração, erros e exportação HTML/impressão. Gerador e conteúdo oficial continuam pendentes de comparação.
 2. **Implementado localmente:** Consignação com valores fixos fictícios, grupos presentes/ausentes e período sem dados; sem inferir a fórmula oficial.
-3. Antes de reproduzir **Avaliações**, inspecionar o questionário e seus estados com uma conta autorizada que exponha a área; definir uma simulação sem efeitos funcionais reais.
+3. **Núcleo de Avaliações implementado localmente** após análise pública do questionário. A conta não expõe a aba; validar execução original, anexos e regras com uma conta autorizada que os disponibilize.
 4. Conferir os estados originais de indisponibilidade de comprovantes, navegação e documentos. Ampliar testes de navegador por função, incluindo teclado e celular.
 
 As integrações oficiais e a autenticação de produção seguem um trabalho separado, dependente de contratos e acesso fornecidos pelos responsáveis.
@@ -83,3 +83,9 @@ As integrações oficiais e a autenticação de produção seguem um trabalho se
 ## Estado após a entrega 4
 
 A coluna da demonstração foi atualizada para incluir Relatórios e Consignação. Os fatos da inspeção original permanecem os mesmos. Essas implementações locais foram verificadas por testes e HTTP; a revisão visual das novas telas segue pendente devido ao bloqueio informado pela ferramenta de navegador. Avaliações funcionais continua sem implementação.
+
+## Estado após a entrega 5
+
+Avaliações funcionais agora conta com uma simulação local persistente, orientada pela evidência pública adicional registrada em [evaluations-evidence.json](evaluations-evidence.json). As perguntas, pontos e decisões são fictícios. Não se afirma reprodução dos questionários específicos do RH. A implementação continua parcial em anexos e tramitação oficial.
+
+A verificação no navegador local foi retomada: questionário, leitura após concluir, exportação, confirmação da ciência e lista em 390 pixels; também foram conferidos a prévia do relatório funcional e a consulta de Consignação com dados e sem dados. Isso reduz a pendência visual da entrega anterior, sem substituir revisão integral de acessibilidade nem comparação com funções originais indisponíveis na conta.

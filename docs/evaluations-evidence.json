@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-02",
+  "method": "Unauthenticated public artifact acquisition, REA static analysis and focused source reading. Authorized original UI observation: evaluation tab not visible; no original evaluation endpoint invoked.",
+  "rea_parent_evidence_id": "ev_37d342f04dc5565675532a23097fb93f87ad63c89956580f0ba326f5dc1ffab1",
+  "rea_bundle_sha256": "c035c00cee13b9c92487cd28cc0ef8382ae027d7f38f1545f6c0483781b0a192",
+  "rea_limitations": [
+    "Only chunk 7858 selected for this REA invocation; other dependency relationships remain unknown.",
+    "Static declarations do not prove availability or behavior for the authenticated account."
+  ],
+  "sources": [
+    {
+      "url": "https://sarandi.oxy.elotech.com.br/governo-digital/7858.506b380709260d58.js",
+      "file": "7858.506b380709260d58.js",
+      "sha256": "0d88c9dd047d016f57e8dbeec6b743d5cec67763b95259f2716e41fe2295ae01",
+      "bytes": 28589,
+      "anchors": [
+        {
+          "anchor": "salvar(o){",
+          "start_byte": 5687
+        },
+        {
+          "anchor": "disableButtonSalvarEFinalizar(){",
+          "start_byte": 6917
+        },
+        {
+          "anchor": "_somarPontuacao(o){",
+          "start_byte": 8794
+        },
+        {
+          "anchor": "concordarDiscordar(o){",
+          "start_byte": 17555
+        },
+        {
+          "anchor": "_carregarQuestionarioAnterior(){",
+          "start_byte": 24668
+        }
+      ]
+    },
+    {
+      "url": "https://sarandi.oxy.elotech.com.br/governo-digital/7943.2205cec82f3a6bae.js",
+      "file": "7943.2205cec82f3a6bae.js",
+      "sha256": "8c82a44165f07e0b0ae1cd1cec8b67bd322bccdafd2e6f0c3b38335d3709a603",
+      "bytes": 197330,
+      "anchors": [
+        {
+          "anchor": "get exigeObservacaoResposta(){",
+          "start_byte": 22808
+        },
+        {
+          "anchor": "tituloPergunta(){",
+          "start_byte": 22965
+        },
+        {
+          "anchor": "selecionarResposta(v,b){",
+          "start_byte": 23160
+        }
+      ]
+    }
+  ],
+  "runtime_original": {
+    "visible_tabs": [
+      "Holerites",
+      "Relatórios"
+    ],
+    "evaluations_ui_accessible_in_inspected_account": false
+  },
+  "local_implementation": {
+    "questionnaire": true,
+    "partial_draft": true,
+    "required_answers": true,
+    "conditional_observations": true,
+    "read_only_after_finalization": true,
+    "agreement_disagreement_simulation": true,
+    "score": "sum of local fixture option points and weights only",
+    "attachments": false,
+    "official_configurable_workflow": false
+  }
+}

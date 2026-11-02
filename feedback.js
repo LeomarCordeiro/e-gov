@@ -1,4 +1,4 @@
-const pages=new Set(['home','holerites','history','income','verify','compare','documents','requests','notices','reports','consignments']);
+const pages=new Set(['home','holerites','history','income','verify','compare','documents','requests','notices','reports','consignments','evaluations']);
 export function parseFeedbackRecord(raw) {
   try {
     const r=JSON.parse(raw);

@@ -1,3 +1,4 @@
+mod evaluations;
 use axum::{
     Json, Router,
     body::{Body, to_bytes},
@@ -87,6 +88,8 @@ async fn migrate(db: &Client) -> Result<(), tokio_postgres::Error> {
     db.batch_execute(include_str!("../migrations/001_portal.sql"))
         .await?;
     db.batch_execute(include_str!("../migrations/002_feedback.sql"))
+        .await?;
+    db.batch_execute(include_str!("../migrations/003_evaluations.sql"))
         .await?;
     db.execute("INSERT INTO portal_notifications(category,title,body,url,dedupe_key) VALUES ('documents','Holerite de outubro disponível','Documento fictício pronto para consulta.','/governo-digital/servidor/contratos/DEMO-001?tab=holerites&abrir=2026-10-normal','seed:payment:2026-10-normal') ON CONFLICT DO NOTHING",&[]).await?;
     Ok(())
@@ -278,6 +281,12 @@ async fn api(
     )
     .map_err(|_| invalid("Consulta inválida."))?
     .0;
+    if method == "POST"
+        && let Some(tail) = path.strip_prefix("/api/evaluations/")
+        && let Some((id, action)) = tail.split_once('/')
+    {
+        return evaluations::save(state, id, action, role, body).await;
+    }
     let seed = &state.seed;
     if method == "GET" {
         match path {
@@ -411,6 +420,7 @@ async fn api(
     let mut db = state.db.lock().await;
     if method == "GET" {
         match path {
+            "/api/evaluations" => return Ok(ok(evaluations::list(&*db, seed).await?)),
             "/api/documents" => return Ok(ok(json!(documents(&*db, seed).await?))),
             "/api/history" => {
                 let docs = documents(&*db, seed).await?;
@@ -462,6 +472,9 @@ async fn api(
                 )));
             }
             _ => {}
+        }
+        if let Some(id) = path.strip_prefix("/api/evaluations/") {
+            return Ok(ok(evaluations::detail(&*db, seed, id).await?));
         }
         if let Some(id) = path.strip_prefix("/api/reports/") {
             let report = values(&seed["reports"])
@@ -531,6 +544,7 @@ async fn api(
                 "notices",
                 "reports",
                 "consignments",
+                "evaluations",
             ]
             .contains(&input.page.as_str())
             || input.submission_id.len() != 36
@@ -884,6 +898,8 @@ async fn dispatch(state: AppState, req: Request<Body>) -> ApiResult<Response> {
         "/delivery-ui.js",
         "/workflow-ui.js",
         "/contract-ui.js",
+        "/evaluations-ui.js",
+        "/evaluations.css",
         "/document-export.js",
         "/contract.css",
         "/accessibility.js",
