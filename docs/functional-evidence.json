@@ -1,0 +1,132 @@
+{
+  "date": "2026-11-01",
+  "method": "REA static analysis of selected public scripts; focused source reading; authorized live UI observation. No account identifiers or report contents retained.",
+  "rea_parent_evidence_id": "ev_7c3247487b361ff76e410c3561bf4ac88ffc8b48f56961f56fa98a6c3b1010f4",
+  "rea_evidence_bundle_sha256": "1b76d0de0e0b3513dc0497b24b4562b4ef109d2d5fe5ea69864787bb93500a62",
+  "rea_limitations": [
+    "Two selected sources; unselected source relationships unknown.",
+    "Semantic retention ceiling reached for selected bundle; graph is not exhaustive.",
+    "Specific findings below also verified directly at source anchors; no runtime inferred from static code."
+  ],
+  "sources": [
+    {
+      "file": "7943.2205cec82f3a6bae.js",
+      "url": "https://sarandi.oxy.elotech.com.br/governo-digital/7943.2205cec82f3a6bae.js",
+      "sha256": "8c82a44165f07e0b0ae1cd1cec8b67bd322bccdafd2e6f0c3b38335d3709a603",
+      "bytes": 197330,
+      "anchors": [
+        {
+          "anchor": "function go(",
+          "start_byte": 151555
+        },
+        {
+          "anchor": "function fo(",
+          "start_byte": 151656
+        },
+        {
+          "anchor": "function Ro(",
+          "start_byte": 155050
+        },
+        {
+          "anchor": "_loadRelatorios(){",
+          "start_byte": 167549
+        },
+        {
+          "anchor": "downloadRelatorio(t){",
+          "start_byte": 167787
+        },
+        {
+          "anchor": "function nn(",
+          "start_byte": 126462
+        },
+        {
+          "anchor": "abrirQuestionario(t){",
+          "start_byte": 128242
+        },
+        {
+          "anchor": "carregarAvaliacoes(t,a){",
+          "start_byte": 128552
+        },
+        {
+          "anchor": "OXY_MARGEM_CONSIGNADO",
+          "start_byte": 159019
+        },
+        {
+          "anchor": "OXY_AVALIACAO_FUNCIONAL",
+          "start_byte": 159291
+        }
+      ]
+    },
+    {
+      "file": "common.1bbcc5ff44efa0ed.js",
+      "url": "https://sarandi.oxy.elotech.com.br/governo-digital/common.1bbcc5ff44efa0ed.js",
+      "sha256": "02ffeb2f03969f1785445edc2143edcafa3d4bc52cb97e16eddcce19901f5bcf",
+      "bytes": 33062,
+      "anchors": [
+        {
+          "anchor": "findMargemConsignacao(e){",
+          "start_byte": 24911
+        },
+        {
+          "anchor": "findReports(e,c){",
+          "start_byte": 25992
+        },
+        {
+          "anchor": "generateReport(e,c,m){",
+          "start_byte": 26076
+        },
+        {
+          "anchor": "findAvaliacoesPendentes(e,c,m,a){",
+          "start_byte": 26992
+        },
+        {
+          "anchor": "salvarQuestionario(e){",
+          "start_byte": 28085
+        },
+        {
+          "anchor": "fluxoAvaliacao(e){",
+          "start_byte": 28296
+        },
+        {
+          "anchor": "concordar(e){",
+          "start_byte": 28680
+        }
+      ]
+    },
+    {
+      "file": "runtime.41ca5e8dca9ac9a5.js",
+      "url": "https://sarandi.oxy.elotech.com.br/governo-digital/runtime.41ca5e8dca9ac9a5.js",
+      "sha256": "58be903ccc906496f60323627bd4089cbf59f16d23077cec3a3c4698beff3611",
+      "bytes": 4608,
+      "anchors": [
+        {
+          "anchor": "7858:",
+          "start_byte": 2306
+        }
+      ]
+    }
+  ],
+  "runtime": {
+    "application_version": "8.4.11",
+    "main_and_runtime_script_names_match_retained_capture": true,
+    "visible_contract_tabs": [
+      "Holerites",
+      "Relatórios"
+    ],
+    "not_visible_contract_tabs": [
+      "Vida Funcional",
+      "Consignação",
+      "Avaliações"
+    ],
+    "reports": [
+      "Portal Servidor - Vida Funcional"
+    ],
+    "report_viewer": {
+      "opened": true,
+      "print_control": true,
+      "download_control": true,
+      "document_contents_audited": false
+    },
+    "permission_reason": "unknown; permission and entity feature gates declared in public code, exact account configuration not inspected"
+  }
+}

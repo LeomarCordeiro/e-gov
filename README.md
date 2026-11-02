@@ -75,11 +75,12 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked -- --include-ignored
 node tests/delivery.test.mjs
 node tests/workflow.test.mjs
+node tests/feedback.test.mjs
 ```
 
 O teste de integração precisa do banco local preparado. Ele cria um schema exclusivo, testa os handlers reais com PostgreSQL e o remove ao final, sem alterar as tabelas de demonstração. Testa reconexão, migração idempotente, fluxo de atendimento, documentos, preferências, leitura de avisos, auditoria e limites de acesso aos arquivos.
 
-Nesta entrega passaram **14 testes**: 3 Rust (incluindo integração PostgreSQL) e 11 JavaScript. Compilação, `cargo fmt --check` e Clippy sem avisos também verificados. A API em execução respondeu com saúde válida. Estes testes não constituem validação visual: revisão em celular, teclado e navegador permanece pendente porque o acesso ao navegador local está desabilitado na sessão de trabalho. Os cenários REA em `tests/*.scenario.json` são roteiros anteriores, não comprovam aprovação desses fluxos novos.
+Nesta entrega passaram **17 testes**: 3 Rust (incluindo integração PostgreSQL) e 14 JavaScript. Compilação, `cargo fmt --check` e Clippy sem avisos também verificados. A API em execução respondeu com saúde válida. Nesta etapa, o navegador voltou a estar disponível: foram conferidos o carregamento e a abertura do avatar VLibras, envio local da pesquisa, resumo no RH, persistência após recarregar e ativação/restauração de fonte e contraste. Uma revisão integral dos fluxos, dispositivos e navegação por teclado permanece pendente. Os cenários REA em `tests/*.scenario.json` são roteiros anteriores, não comprovam aprovação desses fluxos novos.
 
 ## Antes do uso real
 
@@ -93,3 +94,19 @@ O projeto foi registrado na seção Projetos como **REA**. O código do portal p
 - Portal e-gov: `C:\Users\leoma\Documents\ChatGPT\REA\projects\sarandi-servidor`
 
 Materiais de investigação (`evidence/`, `.browser-profile/`), credenciais, banco, dependências e binários compilados não integram o Git nem o ZIP. Veja [RECONSTRUCTION.md](RECONSTRUCTION.md) para a origem e os limites das observações. As evoluções são funcionalidades locais propostas pelo usuário, não afirmações sobre o que existe no sistema original.
+
+## Libras e pesquisa de satisfação
+
+**VLibras:** use **Ativar VLibras**, na lateral. Após o carregamento, o botão é substituído pelo ícone oficial azul. Abra o tradutor para usar o avatar e seus controles. Feche a janela do tradutor para voltar à interação normal com os controles do portal. Contraste e aumento de fonte continuam no botão de acessibilidade separado.
+
+A integração segue a [documentação oficial](https://vlibras.gov.br/doc/widget/installation/webpageintegration.html). O serviço precisa de internet: o navegador carrega recursos de `vlibras.gov.br` e seu CDN e a tradução pode enviar o texto selecionado aos serviços VLibras. Não é uma tradução offline nem um mecanismo próprio em Rust. O servidor/API continuam em Rust. Se o serviço estiver indisponível, a interface informa o erro; o restante do portal pode ser utilizado.
+
+**Pesquisa:** abra **Avaliar experiência** no rodapé. A pesquisa também pode aparecer após um download, quando não há modal aberto. Notas de 1 a 5 são opcionais; fechar não envia resposta. A confirmação é lembrada por navegador. Respostas e a página avaliada são salvas em `satisfaction_feedback` no PostgreSQL. Não é coletado texto livre nem são enviados dados ao PostHog. A API usa um identificador de envio para evitar duplicação em tentativas repetidas; não é autenticação nem garantia de uma resposta por pessoa.
+
+Em **Avisos e preferências**, selecione **RH (simulado)** e abra **Avaliações da experiência** para ver contagem, média e distribuição das notas. Isso é pesquisa de usabilidade; não corresponde ao módulo de avaliação funcional do servidor original.
+
+A migração aditiva `002_feedback.sql` é aplicada ao iniciar; as respostas ficam no mesmo volume persistente local. O teste de integração valida limites de nota, contexto, reenvio sem duplicação, conflitos, acesso ao resumo e persistência. Uma nota fictícia 4 foi registrada manualmente durante o teste do navegador e integra a base de demonstração local.
+
+## Levantamento de equivalência
+
+Veja a [matriz de comparação funcional](docs/FUNCTIONAL-COMPARISON.md) e sua [proveniência](docs/functional-evidence.json). A inspeção autenticada mostrou Holerites e Relatórios no contrato, incluindo emissão de **Portal Servidor - Vida Funcional**. Consignação e Avaliações não apareceram na navegação dessa conta. Essas áreas não foram implementadas nesta etapa; a análise estática detalha o que é declarado e o que continua desconhecido.

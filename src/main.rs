@@ -86,6 +86,8 @@ async fn connect(url: &str) -> Result<Client, tokio_postgres::Error> {
 async fn migrate(db: &Client) -> Result<(), tokio_postgres::Error> {
     db.batch_execute(include_str!("../migrations/001_portal.sql"))
         .await?;
+    db.batch_execute(include_str!("../migrations/002_feedback.sql"))
+        .await?;
     db.execute("INSERT INTO portal_notifications(category,title,body,url,dedupe_key) VALUES ('documents','Holerite de outubro disponível','Documento fictício pronto para consulta.','/governo-digital/servidor/contratos/DEMO-001?tab=holerites&abrir=2026-10-normal','seed:payment:2026-10-normal') ON CONFLICT DO NOTHING",&[]).await?;
     Ok(())
 }
@@ -236,6 +238,14 @@ struct PreferenceChange {
     documents: bool,
     requests: bool,
 }
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Feedback {
+    score: i16,
+    page: String,
+    submission_id: String,
+}
+
 fn parse<T: serde::de::DeserializeOwned>(body: &[u8]) -> ApiResult<T> {
     serde_json::from_slice(body)
         .map_err(|_| invalid("Dados inválidos. Confira os campos do formulário."))
@@ -394,6 +404,13 @@ async fn api(
                 let unread = items.iter().filter(|i| i["read"] == false).count();
                 return Ok(ok(json!({"items":items,"unread":unread})));
             }
+            "/api/feedback/summary" => {
+                if role != "rh" {
+                    return Err(forbidden());
+                }
+                let row=db.query_one("SELECT jsonb_build_object('count',count(*),'average',round(avg(score),2),'scores',(SELECT coalesce(jsonb_object_agg(score,n),'{}'::jsonb) FROM (SELECT score,count(*) n FROM satisfaction_feedback GROUP BY score) counts)) FROM satisfaction_feedback",&[]).await?;
+                return Ok(ok(row.get(0)));
+            }
             "/api/audit" => {
                 if role != "rh" {
                     return Err(forbidden());
@@ -440,6 +457,51 @@ async fn api(
             return Ok(ok(d));
         }
         return Err(missing());
+    }
+    if method == "POST" && path == "/api/feedback" {
+        let input: Feedback = parse(body)?;
+        if !(1..=5).contains(&input.score)
+            || ![
+                "home",
+                "holerites",
+                "history",
+                "income",
+                "verify",
+                "compare",
+                "documents",
+                "requests",
+                "notices",
+            ]
+            .contains(&input.page.as_str())
+            || input.submission_id.len() != 36
+            || !input
+                .submission_id
+                .chars()
+                .all(|c| c.is_ascii_hexdigit() || c == '-')
+        {
+            return Err(invalid("Escolha uma nota de 1 a 5 em uma página válida."));
+        }
+        // Parse UUID on the database boundary without casting unvalidated input.
+        let valid:bool=db.query_one("SELECT $1 ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'",&[&input.submission_id]).await?.get(0);
+        if !valid {
+            return Err(invalid("Identificador de avaliação inválido."));
+        }
+        let tx = db.transaction().await?;
+        tx.execute("INSERT INTO satisfaction_feedback(submission_id,score,page) VALUES($1::text::uuid,$2,$3) ON CONFLICT (submission_id) DO NOTHING",&[&input.submission_id,&input.score,&input.page]).await?;
+        let row = tx
+            .query_one(
+                "SELECT score,page FROM satisfaction_feedback WHERE submission_id=$1::text::uuid",
+                &[&input.submission_id],
+            )
+            .await?;
+        if row.get::<_, i16>(0) != input.score || row.get::<_, String>(1) != input.page {
+            return Err(ApiError(
+                StatusCode::CONFLICT,
+                "Esta avaliação já foi registrada.".into(),
+            ));
+        }
+        tx.commit().await?;
+        return Ok(ok(json!({"ok":true})));
     }
     if method == "POST" && path == "/api/requests" {
         if role != "servidor" {
@@ -761,6 +823,9 @@ async fn dispatch(state: AppState, req: Request<Body>) -> ApiResult<Response> {
         "/delivery.js",
         "/delivery-ui.js",
         "/workflow-ui.js",
+        "/accessibility.js",
+        "/feedback.js",
+        "/feedback.css",
         "/zip.js",
         "/styles.css",
         "/delivery.css",
@@ -813,7 +878,7 @@ async fn handler(State(state): State<AppState>, req: Request<Body>) -> Response 
     response
         .headers_mut()
         .insert("referrer-policy", "no-referrer".parse().unwrap());
-    response.headers_mut().insert("content-security-policy","default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'".parse().unwrap());
+    response.headers_mut().insert("content-security-policy","default-src 'self'; script-src 'self' https://vlibras.gov.br https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://vlibras.gov.br https://cdn.jsdelivr.net; img-src 'self' data: blob: https://vlibras.gov.br https://cdn.jsdelivr.net; font-src 'self' https://vlibras.gov.br https://cdn.jsdelivr.net; connect-src 'self' https://vlibras.gov.br https://*.vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://vlibras.gov.br https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-ancestors 'none'".parse().unwrap());
     response
 }
 

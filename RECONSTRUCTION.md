@@ -33,13 +33,13 @@ O logotipo municipal foi obtido do recurso público `/portal-govdig-api/api/pwa/
 - O backend original, o banco de dados e a autenticação real não foram clonados. A API Rust utiliza os dados fictícios base e os registros de demonstração criados localmente.
 - O código público menciona as abas **Consignação**, **Relatórios** e **Avaliações**. Elas não foram implementadas; sua disponibilidade na conta não foi estabelecida por essa análise estática.
 - Solicitações foram acrescentadas como fluxo local fictício, com persistência PostgreSQL. Alteração de cadastro e envio ao município não fazem parte da demonstração.
-- O tradutor **VLibras** não está incluído. Aumento de fonte, alto contraste, rótulos e navegação por teclado são uma escolha de implementação local, sem equivalência funcional ao tradutor.
+- O tradutor **VLibras** foi integrado posteriormente por solicitação do usuário, como serviço oficial online opcional. Aumento de fonte e contraste são controles separados.
 - A validação verifica somente os códigos emitidos pela demonstração; não verifica documentos oficiais.
 - Os diretórios de evidências e o perfil de navegador não são publicados pelo servidor e não acompanham o ZIP de entrega.
 
 ## Verificação registrada
 
-Segunda entrega: 14 testes aprovados (3 Rust com integração PostgreSQL e 11 JavaScript). API em execução também verificada por HTTP. Verificação visual não concluída: o uso do navegador local está desativado nas configurações do Work. Não se afirma equivalência integral com o sistema original.
+Segunda entrega: 17 testes aprovados (3 Rust com integração PostgreSQL e 14 JavaScript). API em execução também verificada por HTTP. A revisão visual integral não está concluída. Na etapa posterior de levantamento, o navegador ficou disponível e os novos fluxos de Libras/pesquisa e os controles de leitura foram conferidos. Não se afirma equivalência integral com o sistema original.
 
 ## Evoluções da primeira entrega
 
@@ -56,3 +56,9 @@ A identidade do fornecedor exibida pela aplicação foi substituída por Arquime
 Backend substituído por Rust (Axum/Tokio) e persistência PostgreSQL em Docker. A fonte fictícia base foi consolidada em `data/demo.json`. A vida funcional ganhou documentos vinculados e filtros; solicitações locais ganharam protocolo, conversa e histórico; avisos ganharam leitura e preferências persistentes. A liberação de documento pendente é uma simulação explícita operada pelo papel RH. Essas funcionalidades não foram observadas no sistema original; foram implementadas para atender à evolução solicitada.
 
 As tabelas do teste de integração ficam em schema exclusivo descartado após o teste. A conexão é reaberta durante o teste para comprovar persistência, sem alterar os registros de uso manual. O PostgreSQL guarda também auditoria local limitada às operações implementadas, não equivalente a uma auditoria de produção.
+
+## Levantamento posterior e recursos indicados no navegador
+
+A [matriz funcional](docs/FUNCTIONAL-COMPARISON.md) distingue o que foi visto no contrato da conta autorizada, o que consta nos scripts públicos e o que é uma evolução local. Relatórios estava disponível com o item de vida funcional e abriu o visualizador. Consignação e Avaliações não apareceram. Nenhuma operação de questionário, concordância ou envio de pesquisa foi realizada no original.
+
+O usuário também indicou o botão VLibras e a pesquisa de satisfação 1–5. Foi integrada a ferramenta oficial VLibras online e criada uma pesquisa própria com persistência PostgreSQL, sem SDK de análise de comportamento. No navegador local, o avatar carregou e funcionou; envio, resumo RH e lembrança da resposta após recarregar foram confirmados. Essa verificação pontual não estabelece equivalência integral nem valida a qualidade linguística das traduções.

@@ -110,9 +110,24 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(call(&state,"POST","/api/requests","servidor",request).await.0,201);
         assert_eq!(call(&state,"GET","/api/notifications","servidor",empty.clone()).await.1["items"],notices["items"]);
         assert_eq!(call(&state,"POST","/api/notifications/read","servidor",json!({"all":true})).await.0,200);
+        let feedback=json!({"score":4,"page":"documents","submissionId":"fbcadaf1-84f6-441f-a36d-849b207e95a6"});
+        assert_eq!(call(&state,"POST","/api/feedback","servidor",feedback.clone()).await.0,200);
+        assert_eq!(call(&state,"POST","/api/feedback","servidor",feedback.clone()).await.0,200);
+        let mut changed=feedback.clone();changed["score"]=json!(2);
+        assert_eq!(call(&state,"POST","/api/feedback","servidor",changed).await.0,409);
+        let mut bad=feedback.clone();bad["score"]=json!(6);
+        assert_eq!(call(&state,"POST","/api/feedback","servidor",bad).await.0,400);
+        let mut bad=feedback.clone();bad["page"]=json!("unknown");
+        assert_eq!(call(&state,"POST","/api/feedback","servidor",bad).await.0,400);
+        let mut bad=feedback;bad["submissionId"]=json!("------------------------------------");
+        assert_eq!(call(&state,"POST","/api/feedback","servidor",bad).await.0,400);
+        assert_eq!(call(&state,"GET","/api/feedback/summary","servidor",empty.clone()).await.0,403);
+        let (_,summary)=call(&state,"GET","/api/feedback/summary","rh",empty.clone()).await;
+        assert_eq!(summary["count"],1);assert_eq!(summary["average"],4.0);assert_eq!(summary["scores"]["4"],1);
         // Reconnect and rerun migrations: persistence and seed idempotency across restarts.
         let db=connect(&url).await.unwrap();db.batch_execute(&format!("SET search_path TO {test_schema}")).await.unwrap();migrate(&db).await.unwrap();
         state.db=Arc::new(Mutex::new(db));
+        assert_eq!(call(&state,"GET","/api/feedback/summary","rh",empty.clone()).await.1["count"],1);
         let (_,saved)=call(&state,"GET",&path,"servidor",empty.clone()).await;
         assert_eq!(saved["messages"].as_array().unwrap().len(),2);assert_eq!(saved["events"].as_array().unwrap().len(),5);
         assert_eq!(call(&state,"GET","/api/notifications","servidor",empty.clone()).await.1["unread"],0);
@@ -120,7 +135,7 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(call(&state,"GET","/api/history-documents/event-1","servidor",empty.clone()).await.0,200);
         assert_eq!(call(&state,"GET","/api/audit","servidor",empty.clone()).await.0,403);
         assert!(!values(&call(&state,"GET","/api/audit","rh",empty.clone()).await.1).is_empty());
-        for path in ["/", "/governo-digital/servidor/solicitacoes", "/governo-digital/servidor/avisos", "/governo-digital/servidor/documentos", "/governo-digital/oxy/validar-autenticacao-relatorios", "/app.js", "/workflow-ui.js", "/workflow.css", "/delivery-ui.js", "/assets/arquimetria-colorida.svg", "/assets/arquimetria-monocromatica.svg", "/assets/arquimetria-icone.svg"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,200,"{path}");}
+        for path in ["/", "/governo-digital/servidor/solicitacoes", "/governo-digital/servidor/avisos", "/governo-digital/servidor/documentos", "/governo-digital/oxy/validar-autenticacao-relatorios", "/app.js", "/workflow-ui.js", "/workflow.css", "/feedback.js", "/feedback.css", "/accessibility.js", "/delivery-ui.js", "/assets/arquimetria-colorida.svg", "/assets/arquimetria-monocromatica.svg", "/assets/arquimetria-icone.svg"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,200,"{path}");}
         for path in ["/.env","/data/demo.json","/evidence/portal-initial.json","/.browser-profile/Local%20State","/assets/..%2f.env"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,404,"{path}");}
         let req=Request::builder().method("POST").uri("/api/requests").header("host","127.0.0.1:4173").header("origin","https://example.invalid").header("content-type","application/json").body(Body::from("{}")).unwrap();
         assert_eq!(handler(State(state.clone()),req).await.status(),StatusCode::FORBIDDEN);
