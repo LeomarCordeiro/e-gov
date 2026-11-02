@@ -31,7 +31,7 @@ O logotipo municipal foi obtido do recurso público `/portal-govdig-api/api/pwa/
 ## Limites e escolhas
 
 - O backend original, o banco de dados e a autenticação real não foram clonados. A API Rust utiliza os dados fictícios base e os registros de demonstração criados localmente.
-- O código público menciona as abas **Consignação**, **Relatórios** e **Avaliações**. Elas não foram implementadas; sua disponibilidade na conta não foi estabelecida por essa análise estática.
+- Consignação e Relatórios foram implementados posteriormente com dados fictícios, orientados pelo levantamento registrado na matriz funcional. Avaliações funcionais não foi implementada; suas regras de questionário permanecem desconhecidas.
 - Solicitações foram acrescentadas como fluxo local fictício, com persistência PostgreSQL. Alteração de cadastro e envio ao município não fazem parte da demonstração.
 - O tradutor **VLibras** foi integrado posteriormente por solicitação do usuário, como serviço oficial online opcional. Aumento de fonte e contraste são controles separados.
 - A validação verifica somente os códigos emitidos pela demonstração; não verifica documentos oficiais.
@@ -39,7 +39,7 @@ O logotipo municipal foi obtido do recurso público `/portal-govdig-api/api/pwa/
 
 ## Verificação registrada
 
-Segunda entrega: 17 testes aprovados (3 Rust com integração PostgreSQL e 14 JavaScript). API em execução também verificada por HTTP. A revisão visual integral não está concluída. Na etapa posterior de levantamento, o navegador ficou disponível e os novos fluxos de Libras/pesquisa e os controles de leitura foram conferidos. Não se afirma equivalência integral com o sistema original.
+Segunda entrega: 23 testes aprovados (3 Rust com integração PostgreSQL e 20 JavaScript). API em execução também verificada por HTTP. A revisão visual integral não está concluída. Na etapa posterior de levantamento, o navegador ficou disponível e os novos fluxos de Libras/pesquisa e os controles de leitura foram conferidos. Não se afirma equivalência integral com o sistema original.
 
 ## Evoluções da primeira entrega
 
@@ -62,3 +62,9 @@ As tabelas do teste de integração ficam em schema exclusivo descartado após o
 A [matriz funcional](docs/FUNCTIONAL-COMPARISON.md) distingue o que foi visto no contrato da conta autorizada, o que consta nos scripts públicos e o que é uma evolução local. Relatórios estava disponível com o item de vida funcional e abriu o visualizador. Consignação e Avaliações não apareceram. Nenhuma operação de questionário, concordância ou envio de pesquisa foi realizada no original.
 
 O usuário também indicou o botão VLibras e a pesquisa de satisfação 1–5. Foi integrada a ferramenta oficial VLibras online e criada uma pesquisa própria com persistência PostgreSQL, sem SDK de análise de comportamento. No navegador local, o avatar carregou e funcionou; envio, resumo RH e lembrança da resposta após recarregar foram confirmados. Essa verificação pontual não estabelece equivalência integral nem valida a qualidade linguística das traduções.
+
+## Entrega 4
+
+Relatórios recebeu catálogo local e emissão do relatório de vida funcional em HTML, com impressão para PDF. O original abriu um visualizador de PDF; a demonstração não replica o gerador original nem o conteúdo do documento real. Consignação recebeu uma apresentação local de valores fixos e grupos opcionais, com filtro adicional de competências fictícias. Sua fórmula oficial continua desconhecida. Nenhum endpoint original foi chamado pela implementação.
+
+Foram adicionados testes de API para catálogo, relatório, indisponibilidade, verificação de código, consulta de margens e validação de períodos; testes de renderização para texto escapado, documentos pendentes, grupos opcionais e erros; e verificação da exportação HTML compartilhada. O acesso automatizado ao navegador permaneceu bloqueado nesta entrega, portanto as novas telas não são apresentadas como visualmente aprovadas.

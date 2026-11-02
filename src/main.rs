@@ -289,6 +289,38 @@ async fn api(
                 ));
             }
             "/api/profile" => return Ok(ok(seed["person"].clone())),
+            "/api/reports" => return Ok(ok(seed["reports"].clone())),
+            "/api/consignments" => {
+                let periods = values(&seed["consignments"]);
+                let first = &periods[0];
+                let year = params
+                    .get("year")
+                    .map(|v| v.parse::<i64>())
+                    .transpose()
+                    .map_err(|_| invalid("Ano inválido."))?
+                    .unwrap_or(first["year"].as_i64().unwrap());
+                let month = params
+                    .get("month")
+                    .map(|v| v.parse::<i64>())
+                    .transpose()
+                    .map_err(|_| invalid("Mês inválido."))?
+                    .unwrap_or(first["month"].as_i64().unwrap());
+                if !(1..=12).contains(&month) || !(1900..=2100).contains(&year) {
+                    return Err(invalid("Período inválido."));
+                }
+                let data = periods
+                    .iter()
+                    .find(|p| p["year"] == year && p["month"] == month)
+                    .map(|p| p["data"].clone())
+                    .unwrap_or(Value::Null);
+                let periods: Vec<_> = periods
+                    .iter()
+                    .map(|p| json!({"year":p["year"],"month":p["month"]}))
+                    .collect();
+                return Ok(ok(
+                    json!({"periods":periods,"year":year,"month":month,"data":data,"source":"Valores fixos fictícios. Não representam regras oficiais de consignação."}),
+                ));
+            }
             "/api/payments" => {
                 let year = params
                     .get("year")
@@ -341,6 +373,13 @@ async fn api(
                     if i["verificationCode"] == code {
                         return Ok(ok(
                             json!({"valid":true,"kind":"Comprovante de Rendimento","code":code,"person":seed["person"]["name"],"period":i["year"].to_string()}),
+                        ));
+                    }
+                }
+                for report in values(&seed["reports"]) {
+                    if report["availability"] == "available" && report["verificationCode"] == code {
+                        return Ok(ok(
+                            json!({"valid":true,"kind":"Relatório de vida funcional","code":code,"person":seed["person"]["name"],"period":"Histórico fictício do vínculo"}),
                         ));
                     }
                 }
@@ -424,6 +463,25 @@ async fn api(
             }
             _ => {}
         }
+        if let Some(id) = path.strip_prefix("/api/reports/") {
+            let report = values(&seed["reports"])
+                .iter()
+                .find(|r| r["id"] == id)
+                .ok_or_else(missing)?;
+            if report["availability"] != "available" {
+                return Err(ApiError(
+                    StatusCode::CONFLICT,
+                    "Relatório ainda não liberado.".into(),
+                ));
+            }
+            let docs = documents(&*db, seed).await?;
+            let events:Vec<_>=values(&seed["history"]).iter().map(|e|json!({"id":e["id"],"date":e["date"],"title":e["title"],"type":e["type"],"description":e["description"],"document":docs.iter().find(|d|d["id"]==e["document"]["id"])})).collect();
+            let generated_at: Value = db.query_one("SELECT to_jsonb(now())", &[]).await?.get(0);
+            audit(&*db, role, "report.generated", id, json!({"format":"html"})).await?;
+            return Ok(ok(
+                json!({"report":report,"person":seed["person"],"events":events,"generatedAt":generated_at}),
+            ));
+        }
         if let Some(id) = path.strip_prefix("/api/requests/") {
             let id = id.parse::<i64>().map_err(|_| missing())?;
             return Ok(ok(request_detail(&*db, id).await?));
@@ -471,6 +529,8 @@ async fn api(
                 "documents",
                 "requests",
                 "notices",
+                "reports",
+                "consignments",
             ]
             .contains(&input.page.as_str())
             || input.submission_id.len() != 36
@@ -823,6 +883,9 @@ async fn dispatch(state: AppState, req: Request<Body>) -> ApiResult<Response> {
         "/delivery.js",
         "/delivery-ui.js",
         "/workflow-ui.js",
+        "/contract-ui.js",
+        "/document-export.js",
+        "/contract.css",
         "/accessibility.js",
         "/feedback.js",
         "/feedback.css",

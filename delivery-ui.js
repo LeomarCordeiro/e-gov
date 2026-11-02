@@ -1,3 +1,4 @@
+import {documentStyles,standaloneDocument as standalone} from './document-export.js';
 import {comparePayments,explainRubric,filterDocuments} from './delivery.js';
 import {createZip} from './zip.js';
 
@@ -77,17 +78,11 @@ export function createDeliveryUI(ctx) {
     return d.kind==='payment'?ctx.receiptDocument(ctx.getPayments().find(p=>p.id===d.paymentId)):ctx.incomeDocument(await api('income?year='+d.year));
   }
   function filename(d){if(d.kind==='history')return `evento-${d.eventId}.html`;return d.kind==='payment'?`holerite-${d.paymentId}.html`:`comprovante-${d.year}.html`;}
-  async function standalone(html) {
-    const response=await fetch('/styles.css');if(!response.ok)throw new Error('Não foi possível preparar o estilo dos documentos.');
-    const css=(await response.text()).replace(/@font-face\{[^}]*\}/g,'');
-    return html.replace(/<link rel="stylesheet"[^>]*>/,`<style>${css}</style>`);
-  }
   async function batchDownload(button) {
     const chosen=catalog().filter(d=>selected.has(d.id)&&d.availability!=='pending');if(!chosen.length)return;
     button.disabled=true;button.textContent='Preparando documentos…';
     try {
-      const response=await fetch('/styles.css');if(!response.ok)throw new Error('Não foi possível preparar o estilo dos documentos.');
-      const css=(await response.text()).replace(/@font-face\{[^}]*\}/g,'');
+      const css=await documentStyles();
       const files=[];
       for(const d of chosen){const html=await documentHTML(d);files.push({name:filename(d),data:html.replace(/<link rel="stylesheet"[^>]*>/,'<link rel="stylesheet" href="estilos.css">')});}
       files.push({name:'estilos.css',data:css},{name:'LEIA-ME.txt',data:'DEMONSTRAÇÃO LOCAL — DADOS FICTÍCIOS\nExtraia o ZIP e abra os arquivos HTML. Para PDF, use a impressão do navegador.\nSem validade oficial. O pacote não depende do portal original nem do servidor local.\n'});

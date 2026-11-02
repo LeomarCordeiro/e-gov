@@ -81,6 +81,22 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(call(&state,"GET","/api/income?year=2026","servidor",empty.clone()).await.1["partial"],true);
         for code in ["DEMO-202610-N-001","demo-ir-2025-001"] {assert_eq!(call(&state,"GET",&format!("/api/verify?code={code}"),"servidor",empty.clone()).await.1["valid"],true);}
         for code in ["arbitrary","","DEMO-EVENT-1"] {assert_eq!(call(&state,"GET",&format!("/api/verify?code={code}"),"servidor",empty.clone()).await.1["valid"],false);}
+        let (_,catalog)=call(&state,"GET","/api/reports","servidor",empty.clone()).await;
+        assert_eq!(values(&catalog).len(),1);assert_eq!(catalog[0]["name"],"Portal Servidor - Vida Funcional");
+        let (status,report)=call(&state,"GET","/api/reports/functional-history","servidor",empty.clone()).await;
+        assert_eq!(status,200);assert_eq!(report["person"]["registration"],"DEMO-001");assert_eq!(values(&report["events"]).len(),5);
+        assert_eq!(report["events"][0]["document"]["availability"],"pending");assert!(report["events"][0]["document"].get("body").is_none());
+        assert_eq!(call(&state,"GET","/api/reports/missing","servidor",empty.clone()).await.0,404);
+        let mut unavailable=(*state.seed).clone();unavailable["reports"][0]["availability"]=json!("pending");
+        let unavailable=AppState{seed:Arc::new(unavailable),..state.clone()};
+        assert_eq!(call(&unavailable,"GET","/api/reports/functional-history","servidor",empty.clone()).await.0,409);
+        assert_eq!(call(&state,"GET","/api/verify?code=DEMO-REPORT-HISTORY-001","servidor",empty.clone()).await.1["valid"],true);
+        let (status,margin)=call(&state,"GET","/api/consignments","servidor",empty.clone()).await;
+        assert_eq!(status,200);assert_eq!(margin["year"],2026);assert_eq!(margin["month"],10);assert_eq!(margin["data"]["margemDisponivel"],880);assert_eq!(values(&margin["periods"]).len(),3);
+        let (_,margin)=call(&state,"GET","/api/consignments?year=2026&month=9","servidor",empty.clone()).await;
+        assert_eq!(margin["data"]["consignadosExistentes"],json!({}));assert_eq!(margin["data"]["margemDisponivel"],1330);
+        for period in ["year=2025&month=12","year=2020&month=1"] {assert_eq!(call(&state,"GET",&format!("/api/consignments?{period}"),"servidor",empty.clone()).await.1["data"],Value::Null);}
+        for period in ["year=bad","month=13","month=0","year=3000"] {assert_eq!(call(&state,"GET",&format!("/api/consignments?{period}"),"servidor",empty.clone()).await.0,400);}
         let (_,docs)=call(&state,"GET","/api/documents","servidor",empty.clone()).await;
         assert_eq!(values(&docs).len(),45);assert_eq!(values(&docs).iter().map(|d|d["id"].as_str().unwrap()).collect::<std::collections::HashSet<_>>().len(),45);
         assert_eq!(values(&docs).iter().filter(|d|d["availability"]=="pending").count(),1);
@@ -135,7 +151,7 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(call(&state,"GET","/api/history-documents/event-1","servidor",empty.clone()).await.0,200);
         assert_eq!(call(&state,"GET","/api/audit","servidor",empty.clone()).await.0,403);
         assert!(!values(&call(&state,"GET","/api/audit","rh",empty.clone()).await.1).is_empty());
-        for path in ["/", "/governo-digital/servidor/solicitacoes", "/governo-digital/servidor/avisos", "/governo-digital/servidor/documentos", "/governo-digital/oxy/validar-autenticacao-relatorios", "/app.js", "/workflow-ui.js", "/workflow.css", "/feedback.js", "/feedback.css", "/accessibility.js", "/delivery-ui.js", "/assets/arquimetria-colorida.svg", "/assets/arquimetria-monocromatica.svg", "/assets/arquimetria-icone.svg"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,200,"{path}");}
+        for path in ["/", "/governo-digital/servidor/solicitacoes", "/governo-digital/servidor/avisos", "/governo-digital/servidor/documentos", "/governo-digital/servidor/contratos/DEMO-001?tab=relatorios", "/governo-digital/servidor/contratos/DEMO-001?tab=consignacao", "/governo-digital/oxy/validar-autenticacao-relatorios", "/app.js", "/workflow-ui.js", "/workflow.css", "/feedback.js", "/feedback.css", "/contract-ui.js", "/contract.css", "/document-export.js", "/accessibility.js", "/delivery-ui.js", "/assets/arquimetria-colorida.svg", "/assets/arquimetria-monocromatica.svg", "/assets/arquimetria-icone.svg"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,200,"{path}");}
         for path in ["/.env","/data/demo.json","/evidence/portal-initial.json","/.browser-profile/Local%20State","/assets/..%2f.env"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,404,"{path}");}
         let req=Request::builder().method("POST").uri("/api/requests").header("host","127.0.0.1:4173").header("origin","https://example.invalid").header("content-type","application/json").body(Body::from("{}")).unwrap();
         assert_eq!(handler(State(state.clone()),req).await.status(),StatusCode::FORBIDDEN);

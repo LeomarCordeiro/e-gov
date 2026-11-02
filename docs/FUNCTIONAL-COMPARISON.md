@@ -24,9 +24,9 @@ A página original exibiu versão **8.4.11**. Os nomes de `main` e `runtime` car
 | Comprovantes anuais | Agrupamento anual, emissão, não liberado/indisponível no código público | Dados fictícios anuais, HTML/CSV/impressão | Parcial: disponibilidade anual original não modelada em todas as suas variantes. |
 | Validação de documentos | Formulário e estados válido/inválido no código público | Apenas códigos fictícios locais | Parcial na interface; sem validade/autenticação oficial. |
 | Vida funcional em linha do tempo | Declarada no bundle; aba não visível nesta conta | Linha do tempo com filtros e documentos fictícios | Reconstrução orientada pelo código, sem validação nesta conta. |
-| Vida funcional como relatório | Item e abertura do visualizador observados nesta conta | Ainda não há aba genérica Relatórios | Ausente como fluxo de relatório equivalente. |
-| Consignação | Margens, base e estado vazio declarados; aba não visível nesta conta | Não implementada | Ausente; evidência estática, execução não verificada. |
-| Relatórios genéricos | Lista do serviço, emissão e visualizador; um item disponível nesta conta | Não implementados | Ausente; central de documentos não substitui o catálogo original. |
+| Vida funcional como relatório | Item e abertura do visualizador observados nesta conta | Catálogo local e relatório do vínculo/vida funcional em HTML e impressão | Parcial: emissão simulada, gerador de PDF e conteúdo oficial não reproduzidos. |
+| Consignação | Margens, base e estado vazio declarados; aba não visível nesta conta | Valores fixos fictícios, grupos opcionais e competências de teste | Reconstrução orientada pelo código; execução original não verificada nesta conta. |
+| Relatórios genéricos | Lista do serviço, emissão e visualizador; um item disponível nesta conta | Catálogo local em aba própria e prévia/HTML/impressão | Parcial: apenas um relatório fictício, sem integração ao catálogo oficial. |
 | Avaliações funcionais | Listas, questionários e operações declaradas; aba não visível nesta conta | Não implementadas | Ausente; não confundir com pesquisa de satisfação. |
 | Solicitações | Botão de acesso observado; etapas internas fora deste levantamento | Protocolos, mensagens, RH simulado e histórico | Evolução local; equivalência com o atendimento original desconhecida. |
 | Comparação de holerites e rubricas | Ausência no original não estabelecida | Comparação e memórias fictícias | Evolução local. |
@@ -73,9 +73,13 @@ Não foram retidos no repositório dados pessoais da sessão, URLs com identific
 
 ## Próxima implementação orientada pelo levantamento
 
-1. Reproduzir **Relatórios** com catálogo fictício, item de vida funcional e estados de emissão; explicitar o formato de exportação da demonstração.
-2. Criar **Consignação** com valores fictícios recebidos de uma fonte local, sem inventar a fórmula oficial; demonstrar grupos presentes/ausentes.
+1. **Implementado localmente:** Relatórios com catálogo fictício, item de vida funcional, geração, erros e exportação HTML/impressão. Gerador e conteúdo oficial continuam pendentes de comparação.
+2. **Implementado localmente:** Consignação com valores fixos fictícios, grupos presentes/ausentes e período sem dados; sem inferir a fórmula oficial.
 3. Antes de reproduzir **Avaliações**, inspecionar o questionário e seus estados com uma conta autorizada que exponha a área; definir uma simulação sem efeitos funcionais reais.
 4. Conferir os estados originais de indisponibilidade de comprovantes, navegação e documentos. Ampliar testes de navegador por função, incluindo teclado e celular.
 
 As integrações oficiais e a autenticação de produção seguem um trabalho separado, dependente de contratos e acesso fornecidos pelos responsáveis.
+
+## Estado após a entrega 4
+
+A coluna da demonstração foi atualizada para incluir Relatórios e Consignação. Os fatos da inspeção original permanecem os mesmos. Essas implementações locais foram verificadas por testes e HTTP; a revisão visual das novas telas segue pendente devido ao bloqueio informado pela ferramenta de navegador. Avaliações funcionais continua sem implementação.

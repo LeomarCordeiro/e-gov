@@ -1910,5 +1910,51 @@
       "verificationCode": "DEMO-IR-2024-001",
       "partial": false
     }
+  ],
+  "reports": [
+    {
+      "id": "functional-history",
+      "name": "Portal Servidor - Vida Funcional",
+      "description": "Informações do vínculo e movimentações da demonstração.",
+      "availability": "available",
+      "format": "html",
+      "verificationCode": "DEMO-REPORT-HISTORY-001"
+    }
+  ],
+  "consignments": [
+    {
+      "year": 2026,
+      "month": 10,
+      "data": {
+        "margemConsignacao": 35,
+        "margemBruta": 1330,
+        "margemDisponivel": 880,
+        "consignadosExistentes": {
+          "Empréstimo fictício A": 300,
+          "Empréstimo fictício B": 150
+        },
+        "baseCalculos": {
+          "Vencimento base fictício": 3800,
+          "Adicional fictício": 190,
+          "Ajuste fictício da base": -190
+        }
+      }
+    },
+    {
+      "year": 2026,
+      "month": 9,
+      "data": {
+        "margemConsignacao": 35,
+        "margemBruta": 1330,
+        "margemDisponivel": 1330,
+        "consignadosExistentes": {},
+        "baseCalculos": {}
+      }
+    },
+    {
+      "year": 2025,
+      "month": 12,
+      "data": null
+    }
   ]
 }

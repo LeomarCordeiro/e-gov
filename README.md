@@ -25,6 +25,8 @@ Abra [o portal local](http://127.0.0.1:4173/governo-digital/servidor). Mantenha 
 | Comparação | Inclusões, remoções, valores e referências alteradas; impacto no líquido e inversão dos períodos. |
 | Rubricas | Descrição, referência e memória de cálculo fictícia; indicação explícita quando indisponível. |
 | Documentos | 45 registros: 37 holerites, 3 comprovantes e 5 documentos funcionais. Busca, filtros, prévia e ZIP com HTML/CSS. |
+| Relatórios | Catálogo fictício, relatório do vínculo e vida funcional, prévia, HTML e impressão/PDF. |
+| Consignação | Margens e bases fictícias por competência; exemplos completos, sem detalhamento e sem dados. |
 | Vida funcional | Filtros por datas, tipo e texto; evento vinculado ao documento e à solicitação ao RH. |
 | Solicitações ao RH | Protocolo, vínculo com holerite/evento, mensagens, histórico, resposta simulada, conclusão e reabertura. |
 | Avisos | Documentos liberados e andamento de solicitações; leitura persistente e preferências para novos avisos. |
@@ -76,11 +78,12 @@ cargo test --locked -- --include-ignored
 node tests/delivery.test.mjs
 node tests/workflow.test.mjs
 node tests/feedback.test.mjs
+node tests/contract.test.mjs
 ```
 
 O teste de integração precisa do banco local preparado. Ele cria um schema exclusivo, testa os handlers reais com PostgreSQL e o remove ao final, sem alterar as tabelas de demonstração. Testa reconexão, migração idempotente, fluxo de atendimento, documentos, preferências, leitura de avisos, auditoria e limites de acesso aos arquivos.
 
-Nesta entrega passaram **17 testes**: 3 Rust (incluindo integração PostgreSQL) e 14 JavaScript. Compilação, `cargo fmt --check` e Clippy sem avisos também verificados. A API em execução respondeu com saúde válida. Nesta etapa, o navegador voltou a estar disponível: foram conferidos o carregamento e a abertura do avatar VLibras, envio local da pesquisa, resumo no RH, persistência após recarregar e ativação/restauração de fonte e contraste. Uma revisão integral dos fluxos, dispositivos e navegação por teclado permanece pendente. Os cenários REA em `tests/*.scenario.json` são roteiros anteriores, não comprovam aprovação desses fluxos novos.
+Nesta entrega passaram **23 testes**: 3 Rust (incluindo integração PostgreSQL) e 20 JavaScript. Compilação, `cargo fmt --check` e Clippy sem avisos também verificados. A API em execução respondeu com saúde válida. Nesta etapa, o navegador voltou a estar disponível: foram conferidos o carregamento e a abertura do avatar VLibras, envio local da pesquisa, resumo no RH, persistência após recarregar e ativação/restauração de fonte e contraste. Uma revisão integral dos fluxos, dispositivos e navegação por teclado permanece pendente. Os cenários REA em `tests/*.scenario.json` são roteiros anteriores, não comprovam aprovação desses fluxos novos.
 
 ## Antes do uso real
 
@@ -109,4 +112,17 @@ A migração aditiva `002_feedback.sql` é aplicada ao iniciar; as respostas fic
 
 ## Levantamento de equivalência
 
-Veja a [matriz de comparação funcional](docs/FUNCTIONAL-COMPARISON.md) e sua [proveniência](docs/functional-evidence.json). A inspeção autenticada mostrou Holerites e Relatórios no contrato, incluindo emissão de **Portal Servidor - Vida Funcional**. Consignação e Avaliações não apareceram na navegação dessa conta. Essas áreas não foram implementadas nesta etapa; a análise estática detalha o que é declarado e o que continua desconhecido.
+Veja a [matriz de comparação funcional](docs/FUNCTIONAL-COMPARISON.md) e sua [proveniência](docs/functional-evidence.json). A inspeção autenticada mostrou Holerites e Relatórios no contrato, incluindo emissão de **Portal Servidor - Vida Funcional**. Consignação e Avaliações não apareceram na navegação dessa conta. O levantamento orientou a implementação local de Relatórios e Consignação descrita abaixo. Avaliações funcionais permanece fora da demonstração até que seus questionários e regras sejam inspecionados.
+
+## Entrega 4 — Relatórios e Consignação
+
+Os novos atalhos aparecem na página inicial e nas abas do contrato:
+
+- **Relatórios:** `/governo-digital/servidor/contratos/DEMO-001?tab=relatorios`. Abra **Portal Servidor - Vida Funcional** para visualizar vínculo e movimentações. Use **Baixar HTML** ou **Imprimir / Salvar PDF**. O relatório identifica documentos vinculados ainda não liberados, sem expor seu conteúdo. A emissão registra `report.generated` na auditoria local. Código de teste: `DEMO-REPORT-HISTORY-001`.
+- **Consignação:** `/governo-digital/servidor/contratos/DEMO-001?tab=consignacao`. Consulte **10/2026** (margem disponível R$ 880, com descontos e bases), **09/2026** (margem R$ 1.330, sem detalhamento de grupos) e **12/2025** (sem dados). Nenhum desses valores representa regra oficial, aprovação de crédito ou resultado calculado a partir da folha real.
+
+O backend Rust oferece `GET /api/reports`, `GET /api/reports/{id}` e `GET /api/consignments?year=2026&month=10`. O catálogo e os valores base pertencem a `data/demo.json`. A ausência de dados é distinta de falha de consulta. A consulta por período é um recurso adicional da demonstração, sem afirmar que exista na aba original.
+
+`contract-ui.js` e `contract.css` implementam as telas. `document-export.js` é o proprietário do preparo de estilos para HTML autossuficiente, compartilhado com a central de documentos e os ZIPs.
+
+Nesta entrega foram executados 23 testes, Clippy sem avisos, verificação de formatação e compilação Rust. A API do processo atualizado foi conferida por HTTP. A ferramenta de navegador voltou a reportar acesso desabilitado, apesar de o controle aparecer ativado para o usuário; por isso **as duas novas telas ainda não tiveram conferência visual automatizada**. A posição dos botões de acessibilidade foi aprovada visualmente pelo usuário antes desta entrega e foi preservada.
