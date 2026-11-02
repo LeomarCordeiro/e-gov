@@ -10,12 +10,21 @@ export function filterEvaluations(items,section,query) {
 }
 
 export function evaluationSummary(item,{safe,date}) {
-  return `<div class="info-strip">Demonstração fictícia, sem efeito sobre a vida funcional.</div><h2>${safe(item.title)}</h2><p>${safe(item.personName)} • Matrícula ${safe(item.registration)}<br>${safe(item.role)}<br>Período ${safe(date(item.periodStart))} a ${safe(date(item.periodEnd))}</p><p>Situação: <strong>${labels[item.status]}</strong> • Nota simulada: <strong>${safe(item.score)}</strong></p>${item.questions.map(q=>{const answer=item.answers[q.id],option=q.options.find(o=>o.id===answer?.optionId);return `<section class="evaluation-answer"><h3>${safe(q.title)}</h3><p>${safe(option?.label||'Sem resposta')}</p>${answer?.observation?`<p>Observação: ${safe(answer.observation)}</p>`:''}</section>`;}).join('')}<p>Observação geral: ${safe(item.observation||'Não informada')}</p>${typeof item.agreement==='boolean'?`<p>Ciência local: <strong>${item.agreement?'Concordou':'Discordou'}</strong></p>`:''}`;
+  return `<div class="info-strip">Demonstração fictícia, sem efeito sobre a vida funcional.</div><h2>${safe(item.title)}</h2><p>${safe(item.personName)} • Matrícula ${safe(item.registration)}<br>${safe(item.role)}<br>Período ${safe(date(item.periodStart))} a ${safe(date(item.periodEnd))}</p><p>Situação: <strong>${labels[item.status]}</strong> • Nota simulada: <strong>${safe(item.score)}</strong></p>${item.questions.map(q=>{const answer=item.answers[q.id],option=q.options.find(o=>o.id===answer?.optionId);return `<section class="evaluation-answer"><h3>${safe(q.title)}</h3><p>${safe(option?.label||'Sem resposta')}</p>${answer?.observation?`<p>Observação: ${safe(answer.observation)}</p>`:''}</section>`;}).join('')}${scoreSummaryHTML(item.scoreSummary,safe)}<p>Observação geral: ${safe(item.observation||'Não informada')}</p>${typeof item.agreement==='boolean'?`<p>Ciência local: <strong>${item.agreement?'Concordou':'Discordou'}</strong></p>`:''}`;
+}
+
+const scoreNumber=value=>new Intl.NumberFormat('pt-BR',{maximumFractionDigits:2}).format(value);
+
+export function scoreSummaryHTML(summary,safe,preview=false) {
+  if(!summary)return '';
+  const number=value=>safe(scoreNumber(value));
+  const average=summary.mode==='weighted-average';
+  return `<section class="evaluation-score"><h2>${preview?'Prévia da nota — não salva':'Memória da nota salva'}</h2><p class="evaluation-score-value">${number(summary.score)} <span>de ${number(summary.maximum)}</span></p><p role="status">${safe(summary.answered)} de ${safe(summary.total)} perguntas respondidas. ${summary.answered<summary.total?'Nota parcial; perguntas sem resposta contam como zero.':'Todas as perguntas têm resposta; isso não substitui a validação ao finalizar.'}</p><p>${average?'Média ponderada: soma dos pontos × pesos dividida pelos pesos de todas as perguntas.':'Soma: pontos de cada resposta multiplicados pelo peso da pergunta.'}</p><details><summary>Ver memória de cálculo fictícia</summary><div class="evaluation-score-table"><table><caption>Pontos e pesos do exemplo local</caption><thead><tr><th scope="col">Pergunta</th><th scope="col">Pontos</th><th scope="col">Peso</th><th scope="col">Contribuição</th></tr></thead><tbody>${summary.contributions.map(row=>`<tr><th scope="row">${safe(row.title)}</th><td>${row.points===null?'Sem resposta':number(row.points)}</td><td>${number(row.weight)}</td><td>${number(row.weightedPoints)}</td></tr>`).join('')}</tbody></table></div><p>${number(summary.weightedTotal)}${average?' ÷ '+number(summary.denominator):''} = ${number(summary.score)}.</p></details><p class="small muted">Regra fictícia para testes, sem classificação de aptidão ou efeitos administrativos.${preview?' Alterar respostas não salva o rascunho.':''}</p></section>`;
 }
 
 export function createEvaluationsUI(ctx) {
   const {api,safe,date,heading,link,icon,modal,toast}=ctx;
-  let items=[],active='pending',query='',page=0,size=10,current=null,pending=null;
+  let items=[],active='pending',query='',page=0,size=10,current=null,pending=null,previewRequest=0;
   const url=id=>`/governo-digital/servidor/contratos/DEMO-001?tab=avaliacoes${id?'&evaluation='+encodeURIComponent(id):''}`;
   const $=s=>document.querySelector(s);
   function rows() {
@@ -31,11 +40,31 @@ export function createEvaluationsUI(ctx) {
   async function detailPage(id) {
     current=await api('evaluations/'+encodeURIComponent(id));
     const e=current,readonly=e.readOnly;
-    return heading(e.title,'Perguntas e decisões de demonstração.',`<a href="${url()}" data-evaluation="back" class="button ghost">${icon('back')} Avaliações</a>`)+`<div class="info-strip">${e.action==='agreement'?'Ciência local fictícia. Não assina documento nem tramita uma avaliação real.':'Questionário fictício. A finalização registra somente o teste local.'}</div><p><strong>${safe(e.personName)}</strong> • Matrícula ${safe(e.registration)}<br>${safe(e.questionnaire)}<br>Situação: ${labels[e.status]} • Nota simulada do último salvamento: <strong>${safe(e.score)}</strong></p><form id="evaluation-answer-form" novalidate>${e.questions.map((q,index)=>{const answer=e.answers[q.id];return `<fieldset class="evaluation-question"><legend>${index+1}. ${safe(q.title)}${q.required?' (obrigatória)':''}</legend>${q.options.map(o=>`<label class="evaluation-option"><input type="radio" name="answer-${q.id}" value="${o.id}" ${answer?.optionId===o.id?'checked':''} ${readonly?'disabled':''}> <span>${safe(o.label)}${o.requiresObservation?' — exige observação ao finalizar':''}</span></label>`).join('')}<div class="field"><label for="note-${q.id}">Observação da pergunta ${index+1}</label><textarea id="note-${q.id}" name="note-${q.id}" maxlength="4000" rows="2" ${readonly?'readonly':''}>${safe(answer?.observation||'')}</textarea></div>${readonly?'':`<button type="button" class="row-button" data-evaluation="clear-answer" data-id="${q.id}">Limpar resposta</button>`}</fieldset>`;}).join('')}<div class="field"><label for="evaluation-observation">Observação geral (até 255 caracteres)</label><textarea id="evaluation-observation" name="observation" rows="3" maxlength="255" ${e.status==='completed'?'readonly':''}>${safe(e.observation)}</textarea></div><div id="evaluation-error" role="alert" tabindex="-1"></div><div class="actions evaluation-actions">${!readonly?'<button type="submit" class="button secondary">Salvar rascunho</button><button type="button" class="button" data-evaluation="confirm-finalize">Salvar e Finalizar</button>':''}${e.action==='agreement'&&e.status!=='completed'?'<button type="button" class="button" data-evaluation="confirm-agree">Concordar (simulação)</button><button type="button" class="button secondary" data-evaluation="confirm-disagree">Discordar (simulação)</button>':''}${e.status==='completed'?'<button type="button" class="button secondary" data-evaluation="export">Baixar relatório HTML</button>':''}</div></form>${typeof e.agreement==='boolean'?`<p class="info-strip">Ciência registrada localmente: ${e.agreement?'Concordou':'Discordou'}.</p>`:''}<p class="small muted bottom-note">A nota é a soma dos pontos e pesos definidos no exemplo fictício. Anexos e regras oficiais de tramitação não fazem parte desta simulação.</p>`;
+    return heading(e.title,'Perguntas e decisões de demonstração.',`<a href="${url()}" data-evaluation="back" class="button ghost">${icon('back')} Avaliações</a>`)+`<div class="info-strip">${e.action==='agreement'?'Ciência local fictícia. Não assina documento nem tramita uma avaliação real.':'Questionário fictício. A finalização registra somente o teste local.'}</div><p><strong>${safe(e.personName)}</strong> • Matrícula ${safe(e.registration)}<br>${safe(e.questionnaire)}<br>Situação: ${labels[e.status]} • Nota simulada do último salvamento: <strong>${safe(e.score)}</strong></p><form id="evaluation-answer-form" novalidate>${e.questions.map((q,index)=>{const answer=e.answers[q.id];return `<fieldset class="evaluation-question"><legend>${index+1}. ${safe(q.title)}${q.required?' (obrigatória)':''}</legend>${q.options.map(o=>`<label class="evaluation-option"><input type="radio" name="answer-${q.id}" value="${o.id}" ${answer?.optionId===o.id?'checked':''} ${readonly?'disabled':''}> <span>${safe(o.label)}${o.requiresObservation?' — exige observação ao finalizar':''}</span></label>`).join('')}<div class="field"><label for="note-${q.id}">Observação da pergunta ${index+1}</label><textarea id="note-${q.id}" name="note-${q.id}" maxlength="4000" rows="2" ${readonly?'readonly':''}>${safe(answer?.observation||'')}</textarea></div>${readonly?'':`<button type="button" class="row-button" data-evaluation="clear-answer" data-id="${q.id}">Limpar resposta</button>`}</fieldset>`;}).join('')}<div class="field"><label for="evaluation-observation">Observação geral (até 255 caracteres)</label><textarea id="evaluation-observation" name="observation" rows="3" maxlength="255" ${e.status==='completed'?'readonly':''}>${safe(e.observation)}</textarea></div><div id="evaluation-score-preview" aria-live="polite">${scoreSummaryHTML(e.scoreSummary,safe,!readonly)}</div><div id="evaluation-error" role="alert" tabindex="-1"></div><div class="actions evaluation-actions">${!readonly?'<button type="submit" class="button secondary">Salvar rascunho</button><button type="button" class="button" data-evaluation="confirm-finalize">Salvar e Finalizar</button>':''}${e.action==='agreement'&&e.status!=='completed'?'<button type="button" class="button" data-evaluation="confirm-agree">Concordar (simulação)</button><button type="button" class="button secondary" data-evaluation="confirm-disagree">Discordar (simulação)</button>':''}${e.status==='completed'?'<button type="button" class="button secondary" data-evaluation="export">Baixar relatório HTML</button>':''}</div></form>${typeof e.agreement==='boolean'?`<p class="info-strip">Ciência registrada localmente: ${e.agreement?'Concordou':'Discordou'}.</p>`:''}<p class="small muted bottom-note">A pontuação usa somente os pontos e pesos do exemplo fictício. Anexos e regras oficiais de tramitação não fazem parte desta simulação.</p>`;
   }
   function payload(finalize) {
     const form=new FormData($('#evaluation-answer-form'));
     return {answers:Object.fromEntries(current.questions.map(q=>[q.id,{optionId:form.get('answer-'+q.id)||null,observation:form.get('note-'+q.id)||''}])),observation:form.get('observation')||'',finalize};
+  }
+  async function updatePreview() {
+    const form=$('#evaluation-answer-form'),box=$('#evaluation-score-preview');
+    if(!form||!box||current.readOnly)return;
+    const request=++previewRequest,id=current.id,answers=payload(false).answers;
+    box.innerHTML='<p role="status">Calculando prévia da nota…</p>';
+    box.setAttribute('aria-busy','true');
+    try{
+      const result=await api(`evaluations/${id}/preview`,{method:'POST',body:JSON.stringify({answers})});
+      if(request!==previewRequest||!form.isConnected)return;
+      box.innerHTML=scoreSummaryHTML(result,safe,true);
+    }catch(e){
+      if(request!==previewRequest||!form.isConnected)return;
+      box.innerHTML=`<p role="alert">Não foi possível atualizar a prévia: ${safe(e.message)}. Altere uma resposta ou tente novamente.</p><button type="button" class="button secondary" data-evaluation="preview">Tentar prévia novamente</button>`;
+    }finally{
+      if(request===previewRequest&&form.isConnected)box.removeAttribute('aria-busy');
+    }
+  }
+  async function change(event) {
+    if(event.target.matches('#evaluation-answer-form input[type="radio"]'))await updatePreview();
   }
   async function save(body,agreement=false) {
     try{
@@ -51,7 +80,8 @@ export function createEvaluationsUI(ctx) {
       case 'previous':page=Math.max(0,page-1);$('#evaluation-results').innerHTML=rows();break;
       case 'next':page++;$('#evaluation-results').innerHTML=rows();break;
       case 'clear-filter':query='';page=0;await ctx.render();break;
-      case 'clear-answer':$('#evaluation-answer-form').querySelectorAll(`input[name="answer-${t.dataset.id}"]`).forEach(input=>input.checked=false);break;
+      case 'clear-answer':$('#evaluation-answer-form').querySelectorAll(`input[name="answer-${t.dataset.id}"]`).forEach(input=>input.checked=false);await updatePreview();break;
+      case 'preview':await updatePreview();break;
       case 'confirm-finalize':pending={body:payload(true),agreement:false};confirm();break;
       case 'confirm-agree':case 'confirm-disagree':pending={body:{agree:t.dataset.evaluation==='confirm-agree',observation:$('#evaluation-observation').value},agreement:true};confirm();break;
       case 'cancel':ctx.closeModal();pending=null;break;
@@ -66,5 +96,5 @@ export function createEvaluationsUI(ctx) {
     const button=event.target.querySelector('button[type=submit]');button.disabled=true;
     try{await save(payload(false));}finally{if(button.isConnected)button.disabled=false;}
   }
-  return {listPage,click,submit};
+  return {listPage,click,submit,change};
 }

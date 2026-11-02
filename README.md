@@ -25,7 +25,7 @@ Abra [o portal local](http://127.0.0.1:4173/governo-digital/servidor). Mantenha 
 | Comparação | Inclusões, remoções, valores e referências alteradas; impacto no líquido e inversão dos períodos. |
 | Rubricas | Descrição, referência e memória de cálculo fictícia; indicação explícita quando indisponível. |
 | Documentos | 45 registros: 37 holerites, 3 comprovantes e 5 documentos funcionais. Busca, filtros, prévia e ZIP com HTML/CSS. |
-| Avaliações funcionais | Listas, questionário fictício, rascunho, finalização, consulta, ciência simulada e relatório HTML. |
+| Avaliações funcionais | Listas, questionário fictício, prévia da nota, soma/média ponderada, memória de cálculo, rascunho, finalização, consulta, ciência simulada e relatório HTML. |
 | Relatórios | Catálogo fictício, relatório do vínculo e vida funcional, prévia, HTML e impressão/PDF. |
 | Consignação | Margens e bases fictícias por competência; exemplos completos, sem detalhamento e sem dados. |
 | Vida funcional | Filtros por datas, tipo e texto; evento vinculado ao documento e à solicitação ao RH. |
@@ -141,4 +141,16 @@ A migração `003_evaluations.sql` preserva respostas em `demo_evaluation_respon
 
 **31 testes passaram**. No navegador foram verificados rascunho, validações, finalização, modo de leitura, aviso, confirmação/cancelamento da ciência e download HTML. A lista foi conferida em 390 pixels sem transbordamento horizontal. As telas de Relatórios e Consignação também tiveram sua conferência visual inicial: prévia do relatório funcional, valores de margem e período sem dados.
 
-Ainda faltam anexos, fluxo oficial configurável, média e aptidão parametrizadas e documentos oficiais. A nota exibida é a do último salvamento; não há prévia dinâmica da nota no navegador. Os períodos de liberação dos exemplos são informativos. Veja [evidências e limites de Avaliações](docs/EVALUATIONS.md).
+Na entrega 5 ainda faltavam a prévia da nota e a média ponderada, acrescentadas na entrega 6 abaixo. Anexos, fluxo oficial configurável, aptidão parametrizada e documentos oficiais continuam pendentes. Os períodos de liberação dos exemplos são informativos. Veja [evidências e limites de Avaliações](docs/EVALUATIONS.md).
+
+## Entrega 6 — Prévia e memória das avaliações
+
+Em **Avaliações**, abra **Média ponderada — exemplo de preenchimento** (`demo-eval-5`). Selecionar ou limpar uma resposta atualiza a prévia pelo backend Rust, sem salvar respostas, finalizar ou gerar auditoria/avisos. Em falha de consulta, a nota anterior deixa de ser apresentada como atual e há uma opção de tentar novamente. Respostas atrasadas não substituem a prévia mais recente.
+
+**Ver memória de cálculo fictícia** mostra pontos, pesos, contribuições e divisor. O mesmo cálculo do servidor alimenta prévia, salvamento, consulta e relatório HTML. Os quatro exemplos anteriores mantêm a soma de pontos × pesos. O novo exemplo usa média ponderada, com pesos 2 e 1; respostas 5 e 2 produzem `(5 × 2 + 2 × 1) / 3 = 4`, de um máximo de 5. Perguntas sem resposta contam como zero; a média usa os pesos de todas as perguntas, inclusive as não respondidas. A nota é exibida com até duas casas decimais, sem arredondar o cálculo no servidor. Não há classificação de aptidão.
+
+Endpoint adicional: `POST /api/evaluations/{id}/preview`, com apenas `answers`. A regra e os pontos vêm da massa fictícia; o cliente não pode enviar nota ou finalizar por esse endpoint. Não há migração nova nem configuração editável de regras pelo usuário.
+
+**35 testes passaram:** 8 Rust, incluindo PostgreSQL real em schema isolado, e 27 JavaScript. Clippy, formatação e compilação também passaram. No navegador foram conferidos atualização parcial/completa, memória, seleção de opções e abertura da memória por teclado, ausência de salvamento ao recarregar e persistência após salvar rascunho. A memória foi conferida em 390 pixels; a revisão integral de acessibilidade e dos demais fluxos continua pendente.
+
+Nesta instalação, `demo-eval-5` contém um rascunho fictício com nota 4; uma base nova começa sem respostas. A implementação amplia a demonstração com base nas declarações públicas já registradas, sem alegar equivalência com as regras do RH original.

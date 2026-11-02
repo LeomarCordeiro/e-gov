@@ -285,6 +285,9 @@ async fn api(
         && let Some(tail) = path.strip_prefix("/api/evaluations/")
         && let Some((id, action)) = tail.split_once('/')
     {
+        if action == "preview" {
+            return Ok(ok(evaluations::preview(&state.seed, id, body)?));
+        }
         return evaluations::save(state, id, action, role, body).await;
     }
     let seed = &state.seed;

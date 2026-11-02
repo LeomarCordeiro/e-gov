@@ -22,7 +22,7 @@ Essas são declarações do frontend. Não comprovam as regras efetivamente apli
 
 ## Implementação da demonstração
 
-A aba **Avaliações** é acessível pelo contrato e pela página inicial. Há quatro exemplos fictícios em `data/demo.json`:
+A aba **Avaliações** é acessível pelo contrato e pela página inicial. Há cinco exemplos fictícios em `data/demo.json`:
 
 | Exemplo | Estado inicial | Finalidade |
 | --- | --- | --- |
@@ -30,12 +30,15 @@ A aba **Avaliações** é acessível pelo contrato e pela página inicial. Há q
 | `demo-eval-2` | Minha concluída | Consulta de uma avaliação pessoal concluída. |
 | `demo-eval-3` | Respondida | Consulta de respostas fictícias anteriores. |
 | `demo-eval-4` | Ciência pendente | Testar concordância/discordância local sobre respostas já apresentadas. |
+| `demo-eval-5` | Pendente | Preencher exemplo com média ponderada, pesos 2 e 1 e máximo 5. |
 
 As três seções reproduzem os rótulos identificados no original: **Pendentes**, **Minhas Concluídas** e **Respondidas**. O enquadramento dos exemplos nas seções é uma regra local explícita, não uma recuperação das regras reais do RH. Há busca por matrícula/nome, seleção de 10 a 50 itens por página e estado vazio.
 
 O backend Rust valida identidade de pergunta e opção, limites de observação e completude na finalização. Rascunhos aceitam respostas parciais. A transação PostgreSQL é responsável por salvar e finalizar; uma resposta finalizada não pode ser sobrescrita por outro envio. Concordância e discordância são exclusivamente simulações sobre a massa fictícia. O seletor de papéis do portal continua sem valor de autenticação de produção.
 
-A nota apresentada é a soma de pontos e pesos **dos exemplos locais**, calculada pelo servidor. Não há classificação de aptidão nem uso para decisões funcionais. A interface mostra a nota do último salvamento, sem simular a prévia dinâmica do original.
+O servidor Rust é o único responsável pelo cálculo. A nota usa soma de pontos × pesos nos exemplos 1–4 e média ponderada no exemplo 5. O divisor da média é a soma dos pesos de todas as perguntas; perguntas não respondidas contribuem com zero e são identificadas como pendentes. O mesmo cálculo fornece nota, máximo e memória por pergunta na prévia, no salvamento, na consulta e no relatório HTML. A exibição usa até duas casas decimais. Não há classificação de aptidão nem uso para decisões funcionais.
+
+Selecionar ou limpar uma resposta consulta uma prévia sem persistir o formulário. A prévia aceita respostas parciais, mas a finalização continua exigindo perguntas obrigatórias e observações condicionais. A interface ignora respostas de rede ultrapassadas e mostra falha com recuperação quando a prévia não pode ser calculada. Somente Salvar rascunho ou Salvar e Finalizar persiste respostas.
 
 Persistência: migração aditiva `003_evaluations.sql`, tabela `demo_evaluation_responses`. Operações `evaluation.draft`, `evaluation.finalized` e `evaluation.agreement` são registradas na auditoria local. Finalização e ciência podem gerar aviso na categoria de atendimento, conforme a preferência existente. A consulta e o relatório HTML usam as respostas persistidas, escapando o texto informado.
 
@@ -43,12 +46,13 @@ Endpoints locais:
 
 - `GET /api/evaluations`
 - `GET /api/evaluations/{id}`
+- `POST /api/evaluations/{id}/preview`: apenas respostas; consulta sem escrita nem eventos.
 - `POST /api/evaluations/{id}/answers`: respostas, observação e indicador de finalização.
 - `POST /api/evaluations/{id}/agreement`: decisão booleana e observação.
 
 ## Limites remanescentes
 
-Os períodos de liberação mostrados são informativos na massa fictícia. Upload e download de anexos, fluxos configuráveis de múltiplos participantes, cabeçalho/rodapé personalizados, média parametrizada, nota mínima, aptidão e PDF oficial não foram reproduzidos. O relatório local é HTML; a implementação não é uma assinatura ou uma decisão administrativa.
+Os períodos de liberação mostrados são informativos na massa fictícia. Upload e download de anexos, fluxos configuráveis de múltiplos participantes, cabeçalho/rodapé personalizados, editor de regras de cálculo, nota mínima, aptidão e PDF oficial não foram reproduzidos. O relatório local é HTML; a implementação não é uma assinatura ou uma decisão administrativa.
 
 Perguntas, textos, opções, notas e pessoas são fictícios. Nenhum dado real de avaliação foi usado. A equivalência integral ainda exige inspeção com uma conta que disponibilize a área e validação das regras pelo responsável.
 
@@ -59,3 +63,9 @@ Foram aprovados 31 testes: 6 Rust, incluindo integração PostgreSQL em schema i
 No navegador local foram conferidos: rascunho parcial, erro de pergunta obrigatória, erro de observação exigida, finalização com nota simulada 7, campos bloqueados depois de concluir, aviso gerado, confirmação/cancelamento da ciência e download HTML. O arquivo baixado foi conferido: estilos embutidos, conteúdo fictício e nenhum script. Em 390 pixels, a lista foi inspecionada e a largura do documento não ultrapassou a janela. O ajuste temporário de tamanho foi restaurado.
 
 O exemplo `demo-eval-1` foi finalizado durante a verificação manual desta instalação; seu resultado fica disponível em Respondidas. `demo-eval-4` permanece pendente. Uma instalação nova, sem o banco desta máquina, começa com os estados da massa base.
+
+## Verificação da entrega 6
+
+35 testes passaram: 8 Rust e 27 JavaScript. O fluxo real com PostgreSQL confirmou que a prévia não altera o questionário nem a auditoria e produz a mesma memória que o rascunho salvo. Os testes cobrem soma, média com pesos diferentes, respostas parciais, rejeição de pontos/finalização enviados pelo cliente, identidades inválidas, erro de regra, escape de texto e respostas de rede fora de ordem. Clippy, formatação e compilação passaram.
+
+No navegador: prévia parcial e completa, nota 4 de 5 e memória `12 / 3`, recarregamento sem salvar, rascunho, seleção por teclado e memória em 390 pixels. A base desta máquina contém um rascunho de teste em `demo-eval-5`. Não houve operação no portal original nesta entrega. A inspeção original continua limitada à evidência pública já registrada.

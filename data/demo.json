@@ -2228,6 +2228,67 @@
       "action": "agreement",
       "section": "pending",
       "status": "pending"
+    },
+    {
+      "registration": "DEMO-001",
+      "personName": "Ana Silva",
+      "role": "Auxiliar Administrativo",
+      "questionnaire": "Questionário fictício de demonstração",
+      "periodStart": "2026-01-01",
+      "periodEnd": "2026-10-31",
+      "releaseStart": "2026-11-01",
+      "releaseEnd": "2027-12-31",
+      "questions": [
+        {
+          "id": "q1",
+          "title": "Organização das atividades — exemplo fictício",
+          "required": true,
+          "weight": 2,
+          "options": [
+            {
+              "id": "regular",
+              "label": "Atende ao exemplo",
+              "points": 5,
+              "requiresObservation": false
+            },
+            {
+              "id": "review",
+              "label": "Precisa de esclarecimento no exemplo",
+              "points": 2,
+              "requiresObservation": true
+            }
+          ]
+        },
+        {
+          "id": "q2",
+          "title": "Comunicação da equipe — exemplo fictício",
+          "required": true,
+          "weight": 1,
+          "options": [
+            {
+              "id": "regular",
+              "label": "Atende ao exemplo",
+              "points": 5,
+              "requiresObservation": false
+            },
+            {
+              "id": "review",
+              "label": "Precisa de esclarecimento no exemplo",
+              "points": 2,
+              "requiresObservation": true
+            }
+          ]
+        }
+      ],
+      "scoreMode": "weighted-average",
+      "observation": "",
+      "answers": {},
+      "id": "demo-eval-5",
+      "number": 5,
+      "title": "Média ponderada — exemplo de preenchimento",
+      "action": "questionnaire",
+      "section": "pending",
+      "status": "pending"
     }
   ]
 }

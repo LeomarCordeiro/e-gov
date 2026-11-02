@@ -109,6 +109,7 @@ const feedback=createFeedback({api,toast});
 const workflow=createWorkflowUI({safe,icon,link,heading,api,modal,toast,download,navigate,render,closeModal,contractSummary,contractTabs,printableDocument,printDocument,getPayments:()=>allPayments});
 const evaluations=createEvaluationsUI({safe,date,api,heading,link,icon,modal,toast,download,printableDocument,render,navigate,closeModal,contractSummary,contractTabs,rolePanel:workflow.rolePanel,refreshBadge:workflow.refreshBadge});
 document.addEventListener('change',workflow.change);
+document.addEventListener('change',evaluations.change);
 window.addEventListener('focus',()=>workflow.refreshBadge());
 const delivery=createDeliveryUI({safe,money,icon,link,heading,modal,api,download,toast,getPayments:()=>allPayments,receiptDocument,incomeDocument,receiptModal,showIncome,historyDocumentHTML:workflow.historyDocumentHTML,historyDocument:workflow.historyDocument,eventDetail:workflow.eventDetail,rolePanel:workflow.rolePanel});
 document.addEventListener('change',delivery.change);
