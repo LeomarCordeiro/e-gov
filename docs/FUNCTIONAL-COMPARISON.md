@@ -27,7 +27,7 @@ A página original exibiu versão **8.4.11**. Os nomes de `main` e `runtime` car
 | Vida funcional como relatório | Item e abertura do visualizador observados nesta conta | Catálogo local e relatório do vínculo/vida funcional em HTML e impressão | Parcial: emissão simulada, gerador de PDF e conteúdo oficial não reproduzidos. |
 | Consignação | Margens, base e estado vazio declarados; aba não visível nesta conta | Valores fixos fictícios, grupos opcionais e competências de teste | Reconstrução orientada pelo código; execução original não verificada nesta conta. |
 | Relatórios genéricos | Lista do serviço, emissão e visualizador; um item disponível nesta conta | Catálogo local em aba própria e prévia/HTML/impressão | Parcial: apenas um relatório fictício, sem integração ao catálogo oficial. |
-| Avaliações funcionais | Listas, questionários e operações declaradas; aba não visível nesta conta | Questionário, prévia/memória da nota, soma/média ponderada, rascunho, conclusão, leitura e ciência fictícios | Parcial: anexos, regras oficiais e fluxo parametrizado pendentes; não confundir com pesquisa de satisfação. |
+| Avaliações funcionais | Listas, questionários e operações declaradas; aba não visível nesta conta | Questionário, prévia/memória da nota, soma/média ponderada, anexos e fluxo local de revisão/devolução/ciência | Parcial: regras oficiais e fluxo parametrizado pendentes; não confundir com pesquisa de satisfação. |
 | Solicitações | Botão de acesso observado; etapas internas fora deste levantamento | Protocolos, mensagens, RH simulado e histórico | Evolução local; equivalência com o atendimento original desconhecida. |
 | Comparação de holerites e rubricas | Ausência no original não estabelecida | Comparação e memórias fictícias | Evolução local. |
 | Central de documentos e liberação simulada | Ausência no original não estabelecida | Busca, ZIP e documentos funcionais | Evolução local. |
@@ -89,3 +89,7 @@ A coluna da demonstração foi atualizada para incluir Relatórios e Consignaç�
 Avaliações funcionais agora conta com uma simulação local persistente, orientada pela evidência pública adicional registrada em [evaluations-evidence.json](evaluations-evidence.json). As perguntas, pontos e decisões são fictícios. Não se afirma reprodução dos questionários específicos do RH. A implementação continua parcial em anexos e tramitação oficial.
 
 A verificação no navegador local foi retomada: questionário, leitura após concluir, exportação, confirmação da ciência e lista em 390 pixels; também foram conferidos a prévia do relatório funcional e a consulta de Consignação com dados e sem dados. Isso reduz a pendência visual da entrega anterior, sem substituir revisão integral de acessibilidade nem comparação com funções originais indisponíveis na conta.
+
+## Atualização da entrega 7
+
+Anexos PDF/TXT e um fluxo fixo local foram implementados no exemplo `demo-eval-6`, com persistência, histórico e avisos. Tipos, limites e transições são escolhas da demonstração, não regras recuperadas do backend original. Não houve nova inspeção do original nesta entrega. A API e os módulos foram testados; a conferência visual ficou indisponível. Veja [EVALUATIONS.md](EVALUATIONS.md).

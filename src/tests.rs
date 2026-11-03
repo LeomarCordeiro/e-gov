@@ -37,6 +37,25 @@ async fn call(state: &AppState, method: &str, path: &str, role: &str, body: Valu
     )
 }
 
+async fn file_call(
+    state: &AppState,
+    method: &str,
+    path: &str,
+    role: &str,
+    body: Vec<u8>,
+) -> Response {
+    let req = Request::builder()
+        .method(method)
+        .uri(path)
+        .header("host", "127.0.0.1:4173")
+        .header("origin", "http://127.0.0.1:4173")
+        .header("x-demo-role", role)
+        .header("content-type", "application/octet-stream")
+        .body(Body::from(body))
+        .unwrap();
+    handler(State(state.clone()), req).await
+}
+
 // Uses the real PostgreSQL adapter in a fresh schema; never modifies the demo's public tables.
 #[tokio::test]
 #[ignore = "requires local PostgreSQL; run cargo test -- --ignored after setup-local.ps1"]
@@ -121,7 +140,7 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(call(&state,"POST",&format!("{path}/messages"),"servidor",json!({"body":"Mais uma dúvida"})).await.0,409);
         assert_eq!(call(&state,"PATCH",&format!("{path}/status"),"servidor",json!({"status":"aberta"})).await.0,200);
         let (_,evaluations)=call(&state,"GET","/api/evaluations","servidor",empty.clone()).await;
-        assert_eq!(values(&evaluations).len(),5);assert!(evaluations[0].get("questions").is_none());
+        assert_eq!(values(&evaluations).len(),6);assert!(evaluations[0].get("questions").is_none());
         assert!(evaluations[0].get("scoreSummary").is_none());
         assert_eq!(call(&state,"GET","/api/evaluations/demo-eval-2","servidor",empty.clone()).await.1["readOnly"],true);
         assert_eq!(call(&state,"GET","/api/evaluations/missing","servidor",empty.clone()).await.0,404);
@@ -137,6 +156,49 @@ async fn postgres_api_workflow_and_persistence() {
         save_mean["observation"]=json!("Média fictícia");save_mean["finalize"]=json!(false);
         let (status,saved_mean)=call(&state,"POST","/api/evaluations/demo-eval-5/answers","servidor",save_mean).await;
         assert_eq!(status,200);assert_eq!(saved_mean["scoreSummary"],preview);
+        // Attachments and workflow share the real response lock and survive reconnect.
+        let flow="/api/evaluations/demo-eval-6";
+        let step=format!("{flow}/workflow");
+        let upload=format!("{flow}/attachments?filename=apoio%20ficticio.txt");
+        let initial=call(&state,"GET",flow,"servidor",empty.clone()).await.1;
+        assert_eq!(initial["workflow"]["stage"],"filling");
+        assert_eq!(call(&state,"POST",&step,"rh",json!({"action":"approve","observation":""})).await.0,409);
+        assert_eq!(file_call(&state,"POST",&upload,"rh",b"Texto ficticio".to_vec()).await.status(),403);
+        assert_eq!(file_call(&state,"POST",&format!("{flow}/attachments?filename=mal.pdf"),"servidor",b"not a PDF".to_vec()).await.status(),400);
+        assert_eq!(file_call(&state,"POST",&format!("{flow}/attachments?filename=..%2Fmal.txt"),"servidor",b"text".to_vec()).await.status(),400);
+        assert_eq!(file_call(&state,"POST",&upload,"servidor",vec![b'x';evaluation_workflow::MAX_ATTACHMENT_BYTES+1]).await.status(),413);
+        let sent=file_call(&state,"POST",&upload,"servidor",b"Texto ficticio".to_vec()).await;
+        assert_eq!(sent.status(),201);
+        let sent:Value=serde_json::from_slice(&to_bytes(sent.into_body(),10000).await.unwrap()).unwrap();
+        let attachment_id=sent["id"].as_str().unwrap();
+        let download=format!("{flow}/attachments/{attachment_id}");
+        let file=file_call(&state,"GET",&download,"rh",vec![]).await;
+        assert_eq!(file.status(),200);assert_eq!(file.headers()[header::CONTENT_TYPE],"text/plain; charset=utf-8");
+        assert!(file.headers()[header::CONTENT_DISPOSITION].to_str().unwrap().contains("apoio%20ficticio.txt"));
+        assert_eq!(file.headers()[header::X_CONTENT_TYPE_OPTIONS],"nosniff");
+        assert_eq!(file.headers()[header::CONTENT_SECURITY_POLICY],"sandbox");
+        assert_eq!(to_bytes(file.into_body(),10000).await.unwrap(),&b"Texto ficticio"[..]);
+        assert_eq!(file_call(&state,"GET",&format!("/api/evaluations/demo-eval-5/attachments/{attachment_id}"),"servidor",vec![]).await.status(),404);
+        for _ in 0..4 { assert_eq!(file_call(&state,"POST",&upload,"servidor",b"Exemplo".to_vec()).await.status(),201); }
+        assert_eq!(file_call(&state,"POST",&upload,"servidor",b"Sexto".to_vec()).await.status(),409);
+        let submission=json!({"answers":{"q1":{"optionId":"regular","observation":""},"q2":{"optionId":"regular","observation":""}},"observation":"Resposta fictícia","finalize":true});
+        assert_eq!(call(&state,"POST",&format!("{flow}/answers"),"rh",submission.clone()).await.0,403);
+        let submitted=call(&state,"POST",&format!("{flow}/answers"),"servidor",submission.clone()).await.1;
+        assert_eq!(submitted["workflow"]["stage"],"review");assert_eq!(submitted["readOnly"],true);assert_eq!(submitted["section"],"pending");
+        assert_eq!(file_call(&state,"POST",&upload,"servidor",b"Bloqueado".to_vec()).await.status(),409);
+        assert_eq!(call(&state,"POST",&step,"servidor",json!({"action":"approve","observation":""})).await.0,403);
+        assert_eq!(call(&state,"POST",&step,"rh",json!({"action":"return","observation":""})).await.0,400);
+        let returned=call(&state,"POST",&step,"rh",json!({"action":"return","observation":"Revisar o exemplo fictício"})).await.1;
+        assert_eq!(returned["workflow"]["stage"],"filling");assert_eq!(returned["readOnly"],false);assert_eq!(returned["answers"],submission["answers"]);
+        assert_eq!(call(&state,"POST",&format!("{flow}/answers"),"servidor",submission.clone()).await.0,200);
+        assert_eq!(call(&state,"POST",&step,"rh",json!({"action":"approve","observation":"Revisão local concluída"})).await.1["workflow"]["stage"],"acknowledgment");
+        assert_eq!(call(&state,"POST",&step,"rh",json!({"action":"approve","observation":""})).await.0,409);
+        let closed=call(&state,"POST",&step,"servidor",json!({"action":"disagree","observation":"Discordância fictícia"})).await.1;
+        assert_eq!(closed["workflow"]["stage"],"completed");assert_eq!(closed["agreement"],false);assert_eq!(closed["section"],"answered");
+        assert_eq!(values(&closed["events"]).len(),10);assert_eq!(values(&closed["attachments"]).len(),5);
+        assert_eq!(call(&state,"POST",&format!("{flow}/answers"),"servidor",submission).await.0,409);
+        assert_eq!(call(&state,"POST",&step,"servidor",json!({"action":"agree","observation":""})).await.0,409);
+        assert_eq!(call(&state,"POST",&format!("{flow}/agreement"),"servidor",json!({"agree":true,"observation":""})).await.0,400);
         let draft=json!({"answers":{"q1":{"optionId":"regular","observation":""}},"observation":"Rascunho fictício","finalize":false});
         assert_eq!(call(&state,"POST","/api/evaluations/demo-eval-1/answers","servidor",draft.clone()).await.1["status"],"draft");
         let mut incomplete=draft.clone();incomplete["finalize"]=json!(true);
@@ -146,6 +208,8 @@ async fn postgres_api_workflow_and_persistence() {
         let (status,saved)=call(&state,"POST","/api/evaluations/demo-eval-1/answers","servidor",completed).await;
         assert_eq!(status,200);assert_eq!(saved["status"],"completed");assert_eq!(saved["section"],"answered");assert_eq!(saved["score"],7.0);
         assert_eq!(call(&state,"POST","/api/evaluations/demo-eval-1/answers","servidor",draft.clone()).await.0,409);
+        assert_eq!(file_call(&state,"POST","/api/evaluations/demo-eval-1/attachments?filename=exemplo.txt","servidor",b"Bloqueado".to_vec()).await.status(),409);
+        assert_eq!(file_call(&state,"POST","/api/evaluations/demo-eval-5/attachments?filename=exemplo.txt","servidor",b"Anexo legado ficticio".to_vec()).await.status(),201);
         assert_eq!(call(&state,"POST","/api/evaluations/demo-eval-2/answers","servidor",draft.clone()).await.0,409);
         assert_eq!(call(&state,"POST","/api/evaluations/demo-eval-4/answers","servidor",draft).await.0,400);
         let agreement=json!({"agree":false,"observation":"Ciência fictícia sem efeito funcional."});
@@ -153,6 +217,7 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(status,200);assert_eq!(saved["agreement"],false);assert_eq!(saved["status"],"completed");
         assert_eq!(call(&state,"POST","/api/evaluations/demo-eval-4/agreement","servidor",agreement).await.0,409);
         let (_,notices)=call(&state,"GET","/api/notifications","servidor",empty.clone()).await;
+        assert_eq!(values(&notices["items"]).iter().filter(|n|n["url"].as_str().is_some_and(|url|url.ends_with("&evaluation=demo-eval-6"))).count(),5);
         assert_eq!(values(&notices["items"]).iter().filter(|n|n["category"]=="documents").count(),2);
         assert_eq!(call(&state,"PATCH","/api/preferences","servidor",json!({"documents":false,"requests":false})).await.0,200);
         assert_eq!(call(&state,"POST","/api/requests","servidor",request).await.0,201);
@@ -175,6 +240,10 @@ async fn postgres_api_workflow_and_persistence() {
         // Reconnect and rerun migrations: persistence and seed idempotency across restarts.
         let db=connect(&url).await.unwrap();db.batch_execute(&format!("SET search_path TO {test_schema}")).await.unwrap();migrate(&db).await.unwrap();
         state.db=Arc::new(Mutex::new(db));
+        let persisted=call(&state,"GET",flow,"servidor",empty.clone()).await.1;
+        assert_eq!(persisted["workflow"]["stage"],"completed");assert_eq!(values(&persisted["attachments"]).len(),5);assert_eq!(persisted["events"],closed["events"]);
+        let persisted_file=file_call(&state,"GET",&download,"servidor",vec![]).await;
+        assert_eq!(to_bytes(persisted_file.into_body(),10000).await.unwrap(),&b"Texto ficticio"[..]);
         assert_eq!(call(&state,"GET","/api/feedback/summary","rh",empty.clone()).await.1["count"],1);
         assert_eq!(call(&state,"GET","/api/evaluations/demo-eval-1","servidor",empty.clone()).await.1["status"],"completed");
         assert_eq!(call(&state,"GET","/api/evaluations/demo-eval-4","servidor",empty.clone()).await.1["agreement"],false);
@@ -185,7 +254,7 @@ async fn postgres_api_workflow_and_persistence() {
         assert_eq!(call(&state,"GET","/api/history-documents/event-1","servidor",empty.clone()).await.0,200);
         assert_eq!(call(&state,"GET","/api/audit","servidor",empty.clone()).await.0,403);
         assert!(!values(&call(&state,"GET","/api/audit","rh",empty.clone()).await.1).is_empty());
-        for path in ["/", "/governo-digital/servidor/solicitacoes", "/governo-digital/servidor/avisos", "/governo-digital/servidor/documentos", "/governo-digital/servidor/contratos/DEMO-001?tab=relatorios", "/governo-digital/servidor/contratos/DEMO-001?tab=consignacao", "/governo-digital/oxy/validar-autenticacao-relatorios", "/app.js", "/workflow-ui.js", "/workflow.css", "/feedback.js", "/feedback.css", "/contract-ui.js", "/contract.css", "/evaluations-ui.js", "/evaluations.css", "/document-export.js", "/accessibility.js", "/delivery-ui.js", "/assets/arquimetria-colorida.svg", "/assets/arquimetria-monocromatica.svg", "/assets/arquimetria-icone.svg"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,200,"{path}");}
+        for path in ["/", "/governo-digital/servidor/solicitacoes", "/governo-digital/servidor/avisos", "/governo-digital/servidor/documentos", "/governo-digital/servidor/contratos/DEMO-001?tab=relatorios", "/governo-digital/servidor/contratos/DEMO-001?tab=consignacao", "/governo-digital/oxy/validar-autenticacao-relatorios", "/app.js", "/workflow-ui.js", "/workflow.css", "/feedback.js", "/feedback.css", "/contract-ui.js", "/contract.css", "/evaluations-ui.js", "/evaluation-resources.js", "/evaluations.css", "/document-export.js", "/accessibility.js", "/delivery-ui.js", "/assets/arquimetria-colorida.svg", "/assets/arquimetria-monocromatica.svg", "/assets/arquimetria-icone.svg"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,200,"{path}");}
         for path in ["/.env","/data/demo.json","/evidence/portal-initial.json","/.browser-profile/Local%20State","/assets/..%2f.env"] {assert_eq!(call(&state,"GET",path,"servidor",empty.clone()).await.0,404,"{path}");}
         let req=Request::builder().method("POST").uri("/api/requests").header("host","127.0.0.1:4173").header("origin","https://example.invalid").header("content-type","application/json").body(Body::from("{}")).unwrap();
         assert_eq!(handler(State(state.clone()),req).await.status(),StatusCode::FORBIDDEN);

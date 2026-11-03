@@ -1,3 +1,4 @@
+mod evaluation_workflow;
 mod evaluations;
 use axum::{
     Json, Router,
@@ -90,6 +91,8 @@ async fn migrate(db: &Client) -> Result<(), tokio_postgres::Error> {
     db.batch_execute(include_str!("../migrations/002_feedback.sql"))
         .await?;
     db.batch_execute(include_str!("../migrations/003_evaluations.sql"))
+        .await?;
+    db.batch_execute(include_str!("../migrations/004_evaluation_workflow.sql"))
         .await?;
     db.execute("INSERT INTO portal_notifications(category,title,body,url,dedupe_key) VALUES ('documents','Holerite de outubro disponível','Documento fictício pronto para consulta.','/governo-digital/servidor/contratos/DEMO-001?tab=holerites&abrir=2026-10-normal','seed:payment:2026-10-normal') ON CONFLICT DO NOTHING",&[]).await?;
     Ok(())
@@ -288,6 +291,19 @@ async fn api(
         if action == "preview" {
             return Ok(ok(evaluations::preview(&state.seed, id, body)?));
         }
+        if action == "workflow" {
+            return evaluation_workflow::advance(state, id, role, body).await;
+        }
+        if action == "attachments" {
+            return evaluation_workflow::upload(
+                state,
+                id,
+                role,
+                params.get("filename").map(String::as_str).unwrap_or(""),
+                body,
+            )
+            .await;
+        }
         return evaluations::save(state, id, action, role, body).await;
     }
     let seed = &state.seed;
@@ -475,6 +491,12 @@ async fn api(
                 )));
             }
             _ => {}
+        }
+        if let Some((id, attachment_id)) = path
+            .strip_prefix("/api/evaluations/")
+            .and_then(|tail| tail.split_once("/attachments/"))
+        {
+            return evaluation_workflow::download(&mut db, seed, id, attachment_id, role).await;
         }
         if let Some(id) = path.strip_prefix("/api/evaluations/") {
             return Ok(ok(evaluations::detail(&*db, seed, id).await?));
@@ -843,6 +865,11 @@ async fn dispatch(state: AppState, req: Request<Body>) -> ApiResult<Response> {
         return Err(invalid("Modo de demonstração inválido."));
     }
     if path.starts_with("/api/") {
+        let attachment_upload = method == "POST"
+            && path
+                .strip_prefix("/api/evaluations/")
+                .and_then(|tail| tail.split_once('/'))
+                .is_some_and(|(_, action)| action == "attachments");
         if !["GET", "HEAD"].contains(&method.as_str()) {
             let host = req
                 .headers()
@@ -861,14 +888,40 @@ async fn dispatch(state: AppState, req: Request<Body>) -> ApiResult<Response> {
                 .headers()
                 .get(header::CONTENT_TYPE)
                 .and_then(|h| h.to_str().ok())
-                .is_some_and(|h| h.starts_with("application/json"))
+                .is_some_and(|h| {
+                    if attachment_upload {
+                        h == "application/octet-stream"
+                    } else {
+                        h.starts_with("application/json")
+                    }
+                })
             {
-                return Err(invalid("Envie os dados como JSON."));
+                return Err(invalid(if attachment_upload {
+                    "Envie o arquivo como application/octet-stream."
+                } else {
+                    "Envie os dados como JSON."
+                }));
             }
         }
-        let bytes = to_bytes(req.into_body(), 65536)
-            .await
-            .map_err(|_| invalid("Solicitação muito grande."))?;
+        let bytes = to_bytes(
+            req.into_body(),
+            if attachment_upload {
+                evaluation_workflow::MAX_ATTACHMENT_BYTES
+            } else {
+                65536
+            },
+        )
+        .await
+        .map_err(|_| {
+            if attachment_upload {
+                ApiError(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "O anexo deve ter até 2 MiB.".into(),
+                )
+            } else {
+                invalid("Solicitação muito grande.")
+            }
+        })?;
         let mut response = api(
             &state,
             if method == "HEAD" { "GET" } else { &method },
@@ -902,6 +955,7 @@ async fn dispatch(state: AppState, req: Request<Body>) -> ApiResult<Response> {
         "/workflow-ui.js",
         "/contract-ui.js",
         "/evaluations-ui.js",
+        "/evaluation-resources.js",
         "/evaluations.css",
         "/document-export.js",
         "/contract.css",
@@ -960,7 +1014,7 @@ async fn handler(State(state): State<AppState>, req: Request<Body>) -> Response 
     response
         .headers_mut()
         .insert("referrer-policy", "no-referrer".parse().unwrap());
-    response.headers_mut().insert("content-security-policy","default-src 'self'; script-src 'self' https://vlibras.gov.br https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://vlibras.gov.br https://cdn.jsdelivr.net; img-src 'self' data: blob: https://vlibras.gov.br https://cdn.jsdelivr.net; font-src 'self' https://vlibras.gov.br https://cdn.jsdelivr.net; connect-src 'self' https://vlibras.gov.br https://*.vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://vlibras.gov.br https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-ancestors 'none'".parse().unwrap());
+    response.headers_mut().entry(header::CONTENT_SECURITY_POLICY).or_insert("default-src 'self'; script-src 'self' https://vlibras.gov.br https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://vlibras.gov.br https://cdn.jsdelivr.net; img-src 'self' data: blob: https://vlibras.gov.br https://cdn.jsdelivr.net; font-src 'self' https://vlibras.gov.br https://cdn.jsdelivr.net; connect-src 'self' https://vlibras.gov.br https://*.vlibras.gov.br https://cdn.jsdelivr.net; frame-src https://vlibras.gov.br https://cdn.jsdelivr.net; object-src 'none'; base-uri 'self'; frame-ancestors 'none'".parse().unwrap());
     response
 }
 

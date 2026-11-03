@@ -1,0 +1,26 @@
+const actions={draft:'Rascunho salvo',finalized:'Questionário finalizado',agreement:'Ciência registrada',submitted:'Enviado ao RH simulado',return:'Devolvido para ajustes',approve:'Encaminhado para ciência',agree:'Ciência: concordou',disagree:'Ciência: discordou','attachment-added':'Anexo incluído'};
+const stages={filling:'Preenchimento',review:'Revisão pelo RH simulado',acknowledgment:'Ciência do servidor',completed:'Concluído'};
+const stamp=value=>new Date(value).toLocaleString('pt-BR');
+const actor=value=>value==='rh'?'RH (simulado)':'Servidor (demonstração)';
+
+export function evaluationResourcesHTML(item,{safe,getRole}) {
+  if(!item.attachmentPolicy)return '';
+  const role=getRole(),policy=item.attachmentPolicy,files=item.attachments||[],events=item.events||[];
+  const editable=role==='servidor'&&!item.readOnly&&(!item.workflow||item.workflow.stage==='filling');
+  const controls=item.workflow?.actions.filter(action=>action.role===role)||[];
+  const workflow=item.workflow?`<section class="section-card evaluation-flow"><h2>Tramitação local</h2><p>Etapa: <strong>${safe(item.workflow.label)}</strong></p><p class="small muted">Fluxo fictício, sem assinatura ou efeitos administrativos. A discordância também encerra esta simulação e fica registrada no histórico.</p>${controls.length?`<div class="field"><label for="evaluation-step-note">Observação da etapa (até 1.000 caracteres; obrigatória ao devolver)</label><textarea id="evaluation-step-note" maxlength="1000" rows="3"></textarea></div><div class="actions">${controls.map(a=>`<button type="button" class="button secondary" data-evaluation="confirm-workflow" data-action="${safe(a.action)}">${safe(a.label)}</button>`).join('')}</div>`:`<p>${item.workflow.stage==='filling'?'O servidor pode preencher, anexar arquivos e enviar ao RH simulado.':item.workflow.stage==='completed'?'As respostas e os anexos ficam disponíveis para consulta.':'Use o seletor acima para experimentar o papel responsável pela próxima etapa.'}</p>`}</section>`:'';
+  return workflow+`<section class="section-card"><h2>Anexos da avaliação</h2><p>Somente arquivos fictícios. ${safe(policy.extensions.map(e=>e.toUpperCase()).join(' ou '))}, até ${safe(policy.maxBytes/1024/1024)} MiB por arquivo e ${safe(policy.maxFiles)} arquivos por avaliação. Armazenamento no banco local.</p>${files.length?`<ul class="evaluation-attachments">${files.map(file=>`<li><div><strong>${safe(file.filename)}</strong><br><span class="small muted">${safe(new Intl.NumberFormat('pt-BR',{maximumFractionDigits:1}).format(file.bytes/1024))} KiB • ${safe(actor(file.actor))} • ${safe(stamp(file.createdAt))}</span></div><button type="button" class="button secondary" data-evaluation="download-attachment" data-id="${safe(file.id)}">Baixar ${safe(file.filename)}</button></li>`).join('')}</ul>`:'<p>Nenhum anexo enviado.</p>'}${editable&&files.length<policy.maxFiles?`<form id="evaluation-attachment-form"><div class="field"><label for="evaluation-file">Arquivo fictício para anexar</label><input id="evaluation-file" name="file" type="file" accept="${safe(policy.extensions.map(e=>'.'+e).join(','))}" required></div><div id="evaluation-attachment-error" role="alert" tabindex="-1"></div><button class="button secondary" type="submit">Enviar anexo local</button></form>`:`<p class="small muted">${files.length>=policy.maxFiles?'Limite de anexos atingido.':'O envio está disponível ao servidor durante o preenchimento.'} Os anexos desta demonstração não podem ser substituídos ou excluídos.</p>`}</section><section class="section-card"><h2>Histórico da avaliação</h2>${events.length?`<ol class="evaluation-events">${events.map(e=>`<li><strong>${safe(actions[e.action]||e.action)}</strong><span>${safe(stages[e.stage]||e.stage)} • ${safe(actor(e.actor))}</span><time>${safe(stamp(e.createdAt))}</time>${e.observation?`<p>${safe(e.observation)}</p>`:''}</li>`).join('')}</ol>`:'<p>Nenhum evento registrado desde a implantação desta funcionalidade.</p>'}</section>`;
+}
+
+export function evaluationFlowReport(item,safe) {
+  const files=item.attachments||[],events=item.events||[];
+  if(!item.attachmentPolicy)return '';
+  return `${item.workflow?`<h2>Tramitação local</h2><p>Etapa: ${safe(item.workflow.label)}. Simulação sem efeitos administrativos.</p>`:''}<h2>Anexos associados</h2>${files.length?`<ul>${files.map(f=>`<li>${safe(f.filename)} — ${safe(f.bytes)} bytes</li>`).join('')}</ul><p>Os arquivos não estão incorporados a este HTML. Baixe cada anexo separadamente no portal local.</p>`:'<p>Nenhum anexo enviado.</p>'}<h2>Histórico local</h2><ol>${events.map(e=>`<li>${safe(actions[e.action]||e.action)} • ${safe(actor(e.actor))} • ${safe(stamp(e.createdAt))}${e.observation?`<p>${safe(e.observation)}</p>`:''}</li>`).join('')}</ol>`;
+}
+
+export async function uploadEvaluationAttachment(api,id,file,policy) {
+  if(!file||!file.size||file.size>policy.maxBytes)throw new Error(`Escolha um arquivo não vazio de até ${policy.maxBytes/1024/1024} MiB.`);
+  const extension=file.name.includes('.')?file.name.split('.').pop().toLowerCase():'';
+  if(!policy.extensions.includes(extension))throw new Error('Escolha um arquivo PDF ou TXT.');
+  return api(`evaluations/${encodeURIComponent(id)}/attachments?filename=${encodeURIComponent(file.name)}`,{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:file});
+}

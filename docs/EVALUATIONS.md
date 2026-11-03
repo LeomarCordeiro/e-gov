@@ -22,7 +22,7 @@ Essas são declarações do frontend. Não comprovam as regras efetivamente apli
 
 ## Implementação da demonstração
 
-A aba **Avaliações** é acessível pelo contrato e pela página inicial. Há cinco exemplos fictícios em `data/demo.json`:
+A aba **Avaliações** é acessível pelo contrato e pela página inicial. Há seis exemplos fictícios em `data/demo.json`:
 
 | Exemplo | Estado inicial | Finalidade |
 | --- | --- | --- |
@@ -31,6 +31,7 @@ A aba **Avaliações** é acessível pelo contrato e pela página inicial. Há c
 | `demo-eval-3` | Respondida | Consulta de respostas fictícias anteriores. |
 | `demo-eval-4` | Ciência pendente | Testar concordância/discordância local sobre respostas já apresentadas. |
 | `demo-eval-5` | Pendente | Preencher exemplo com média ponderada, pesos 2 e 1 e máximo 5. |
+| `demo-eval-6` | Preenchimento | Anexar arquivos e percorrer revisão, devolução e ciência fictícias. |
 
 As três seções reproduzem os rótulos identificados no original: **Pendentes**, **Minhas Concluídas** e **Respondidas**. O enquadramento dos exemplos nas seções é uma regra local explícita, não uma recuperação das regras reais do RH. Há busca por matrícula/nome, seleção de 10 a 50 itens por página e estado vazio.
 
@@ -52,7 +53,7 @@ Endpoints locais:
 
 ## Limites remanescentes
 
-Os períodos de liberação mostrados são informativos na massa fictícia. Upload e download de anexos, fluxos configuráveis de múltiplos participantes, cabeçalho/rodapé personalizados, editor de regras de cálculo, nota mínima, aptidão e PDF oficial não foram reproduzidos. O relatório local é HTML; a implementação não é uma assinatura ou uma decisão administrativa.
+Os períodos de liberação mostrados são informativos na massa fictícia. Os anexos e um fluxo fixo local foram acrescentados na entrega 7. Fluxos configuráveis de múltiplos participantes, cabeçalho/rodapé personalizados, editor de regras de cálculo, nota mínima, aptidão e PDF oficial não foram reproduzidos. O relatório local é HTML; a implementação não é uma assinatura ou uma decisão administrativa.
 
 Perguntas, textos, opções, notas e pessoas são fictícios. Nenhum dado real de avaliação foi usado. A equivalência integral ainda exige inspeção com uma conta que disponibilize a área e validação das regras pelo responsável.
 
@@ -69,3 +70,21 @@ O exemplo `demo-eval-1` foi finalizado durante a verificação manual desta inst
 35 testes passaram: 8 Rust e 27 JavaScript. O fluxo real com PostgreSQL confirmou que a prévia não altera o questionário nem a auditoria e produz a mesma memória que o rascunho salvo. Os testes cobrem soma, média com pesos diferentes, respostas parciais, rejeição de pontos/finalização enviados pelo cliente, identidades inválidas, erro de regra, escape de texto e respostas de rede fora de ordem. Clippy, formatação e compilação passaram.
 
 No navegador: prévia parcial e completa, nota 4 de 5 e memória `12 / 3`, recarregamento sem salvar, rascunho, seleção por teclado e memória em 390 pixels. A base desta máquina contém um rascunho de teste em `demo-eval-5`. Não houve operação no portal original nesta entrega. A inspeção original continua limitada à evidência pública já registrada.
+
+## Entrega 7: anexos e fluxo local
+
+O exemplo `demo-eval-6` usa `workflowEnabled: true`. A etapa persistida é a fonte das permissões de edição; os demais exemplos mantêm suas regras anteriores. Etapas locais: `filling` → `review` → `acknowledgment` → `completed`. O RH simulado pode devolver de `review` para `filling` com motivo obrigatório. Na ciência, concordância e discordância levam a `completed`, com decisão preservada. Não há assinatura, efeito funcional, tramitação oficial ou regra de aptidão.
+
+Questionário e anexos só podem ser alterados durante o preenchimento; os papéis são verificados no servidor a partir do seletor de demonstração. Etapas e gravações compartilham o bloqueio transacional da resposta. Não é um controle de identidade de produção. O histórico registra eventos novos a partir desta implantação; não inventa o histórico dos exemplos concluídos anteriormente e não constitui versionamento integral de todas as respostas anteriores.
+
+Anexos são bytes no PostgreSQL: até cinco arquivos de 2 MiB por avaliação. PDF é admitido por extensão e cabeçalho; TXT exige UTF-8 sem NUL. Não há renderização inline, verificação completa de PDF, análise antimalware, exclusão ou substituição. O download valida a associação entre avaliação e anexo e usa nome codificado e cabeçalhos de download. O HTML de relatório relaciona os arquivos; não os incorpora nem garante sua disponibilidade fora do portal.
+
+As rotas e o roteiro estão na seção Entrega 7 do README. A migração `004_evaluation_workflow.sql` é aditiva e idempotente. Inclui `workflow_stage`, `demo_evaluation_attachments` e `demo_evaluation_events`. Transições podem gerar avisos segundo as preferências de atendimento; gravações, anexos e downloads registram auditoria local.
+
+### Verificação executada na entrega 7
+
+45 testes passaram: 10 Rust e 35 JavaScript. O teste com PostgreSQL real cobre fluxo completo, limites, tipos, bytes, cabeçalhos, isolamento do anexo por avaliação, papéis, etapas inválidas, devolução, finalização e persistência após reconexão. Os módulos da interface cobrem ações por papel, escape de texto, preservação do formulário durante upload, confirmação e recuperação de atualização da lista. Clippy, formatação e compilação passaram.
+
+Na API do processo local foi enviado um TXT fictício de 111 bytes e confirmado o download idêntico (SHA-256 `6907dc2d16fe057225140318ec1400737071d8f47bdaef789f600b4b280986d2`). O exemplo 6 foi enviado, devolvido, reenviado, encaminhado à ciência e concluído com concordância. Ele permanece concluído nesta instalação, com um anexo e seis eventos. Nenhuma operação foi enviada ao original.
+
+O navegador integrado recusou acesso nesta etapa; a nova interface não teve conferência visual nem teste integral de teclado/celular. Essa limitação é distinta da aprovação dos módulos e da API.

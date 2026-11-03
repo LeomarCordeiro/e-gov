@@ -29,7 +29,7 @@ struct Preview {
     answers: BTreeMap<String, Answer>,
 }
 
-fn template<'a>(seed: &'a Value, id: &str) -> ApiResult<&'a Value> {
+pub(super) fn template<'a>(seed: &'a Value, id: &str) -> ApiResult<&'a Value> {
     values(&seed["evaluations"])
         .iter()
         .find(|item| item["id"] == id)
@@ -162,17 +162,27 @@ pub(super) async fn detail<C: GenericClient + Sync>(
     id: &str,
 ) -> ApiResult<Value> {
     let mut item = template(seed, id)?.clone();
-    if let Some(row) = db.query_opt("SELECT answers,observation,finished,agreement,to_jsonb(updated_at) FROM demo_evaluation_responses WHERE evaluation_id=$1", &[&id]).await? {
+    let workflow = evaluation_workflow::enabled(&item);
+    let mut stage = None;
+    if let Some(row) = db.query_opt("SELECT answers,observation,finished,agreement,to_jsonb(updated_at),workflow_stage FROM demo_evaluation_responses WHERE evaluation_id=$1", &[&id]).await? {
         item["answers"] = row.get(0);
         item["observation"] = json!(row.get::<_,String>(1));
         item["status"] = json!(if row.get::<_,bool>(2) { "completed" } else { "draft" });
         item["agreement"] = json!(row.get::<_,Option<bool>>(3));
         item["updatedAt"] = row.get(4);
-        if item["status"] == "completed" && item["section"] == "pending" { item["section"] = json!("answered"); }
+        stage=row.get::<_,Option<String>>(5);
+        if !workflow && item["status"] == "completed" && item["section"] == "pending" { item["section"] = json!("answered"); }
     }
     item["scoreSummary"] = score(&item, &item["answers"])?;
     item["score"] = item["scoreSummary"]["score"].clone();
     item["readOnly"] = json!(item["status"] == "completed" || item["action"] == "agreement");
+    if workflow {
+        evaluation_workflow::project(
+            &mut item,
+            evaluation_workflow::Stage::parse(stage.as_deref())?,
+        );
+    }
+    evaluation_workflow::enrich(db, &mut item).await?;
     Ok(item)
 }
 
@@ -185,6 +195,8 @@ pub(super) async fn list<C: GenericClient + Sync>(db: &C, seed: &Value) -> ApiRe
         object.remove("answers");
         object.remove("observation");
         object.remove("scoreSummary");
+        object.remove("attachments");
+        object.remove("events");
         items.push(item);
     }
     Ok(json!(items))
@@ -198,6 +210,18 @@ pub(super) async fn save(
     body: &[u8],
 ) -> ApiResult<Response> {
     let template = template(&state.seed, id)?;
+    let workflow = evaluation_workflow::enabled(template);
+    if workflow && role != "servidor" {
+        return Err(ApiError(
+            StatusCode::FORBIDDEN,
+            "O preenchimento é feito no papel Servidor da demonstração.".into(),
+        ));
+    }
+    if workflow && action != "answers" {
+        return Err(invalid(
+            "Utilize as ações da etapa de ciência neste exemplo.",
+        ));
+    }
     if template["status"] == "completed" {
         return Err(ApiError(
             StatusCode::CONFLICT,
@@ -222,38 +246,40 @@ pub(super) async fn save(
     };
     let mut db = state.db.lock().await;
     let tx = db.transaction().await?;
-    // The same row owns editing and finalization, so a finalized response cannot be overwritten.
-    tx.execute(
-        "INSERT INTO demo_evaluation_responses(evaluation_id) VALUES($1) ON CONFLICT DO NOTHING",
-        &[&id],
-    )
-    .await?;
-    let finished: bool = tx
-        .query_one(
-            "SELECT finished FROM demo_evaluation_responses WHERE evaluation_id=$1 FOR UPDATE",
-            &[&id],
-        )
-        .await?
-        .get(0);
-    if finished {
+    // Answers, attachments and transitions share the same row lock and stage owner.
+    let (finished, stage) = evaluation_workflow::lock_response(&tx, id).await?;
+    if if workflow {
+        stage != evaluation_workflow::Stage::Filling
+    } else {
+        finished
+    } {
         return Err(ApiError(
             StatusCode::CONFLICT,
-            "Avaliação já finalizada. Abra novamente para consultar.".into(),
+            if workflow {"A avaliação está em outra etapa. Atualize a página; o preenchimento depende de devolução pelo RH simulado."} else {"Avaliação já finalizada. Abra novamente para consultar."}.into(),
         ));
     }
-    tx.execute("UPDATE demo_evaluation_responses SET answers=$2,observation=$3,finished=$4,agreement=$5,updated_at=now() WHERE evaluation_id=$1",&[&id,&answers,&note,&finish,&agreement]).await?;
-    audit(
+    let next_stage = if workflow {
+        Some(if finish { "review" } else { "filling" })
+    } else {
+        None
+    };
+    tx.execute("UPDATE demo_evaluation_responses SET answers=$2,observation=$3,finished=$4,agreement=$5,workflow_stage=$6,updated_at=now() WHERE evaluation_id=$1",&[&id,&answers,&note,&finish,&agreement,&next_stage]).await?;
+    let action = if agreement.is_some() {
+        "agreement"
+    } else if workflow && finish {
+        "submitted"
+    } else if finish {
+        "finalized"
+    } else {
+        "draft"
+    };
+    evaluation_workflow::event(
         &tx,
-        role,
-        if agreement.is_some() {
-            "evaluation.agreement"
-        } else if finish {
-            "evaluation.finalized"
-        } else {
-            "evaluation.draft"
-        },
         id,
-        json!({"finished":finish,"agreement":agreement}),
+        role,
+        action,
+        next_stage.unwrap_or(if finish { "completed" } else { "filling" }),
+        &note,
     )
     .await?;
     if finish {
@@ -261,8 +287,12 @@ pub(super) async fn save(
             &tx,
             "requests",
             "Avaliação fictícia atualizada",
-            "Consulte a resposta registrada na demonstração.",
-            "/governo-digital/servidor/contratos/DEMO-001?tab=avaliacoes",
+            if workflow {
+                "Respostas enviadas ao RH simulado."
+            } else {
+                "Consulte a resposta registrada na demonstração."
+            },
+            &format!("/governo-digital/servidor/contratos/DEMO-001?tab=avaliacoes&evaluation={id}"),
         )
         .await?;
     }

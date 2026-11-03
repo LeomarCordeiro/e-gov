@@ -25,7 +25,7 @@ Abra [o portal local](http://127.0.0.1:4173/governo-digital/servidor). Mantenha 
 | Comparação | Inclusões, remoções, valores e referências alteradas; impacto no líquido e inversão dos períodos. |
 | Rubricas | Descrição, referência e memória de cálculo fictícia; indicação explícita quando indisponível. |
 | Documentos | 45 registros: 37 holerites, 3 comprovantes e 5 documentos funcionais. Busca, filtros, prévia e ZIP com HTML/CSS. |
-| Avaliações funcionais | Listas, questionário fictício, prévia da nota, soma/média ponderada, memória de cálculo, rascunho, finalização, consulta, ciência simulada e relatório HTML. |
+| Avaliações funcionais | Questionários, prévia/memória da nota, anexos PDF/TXT, rascunho, revisão pelo RH simulado, devolução, ciência, histórico e relatório HTML. |
 | Relatórios | Catálogo fictício, relatório do vínculo e vida funcional, prévia, HTML e impressão/PDF. |
 | Consignação | Margens e bases fictícias por competência; exemplos completos, sem detalhamento e sem dados. |
 | Vida funcional | Filtros por datas, tipo e texto; evento vinculado ao documento e à solicitação ao RH. |
@@ -56,7 +56,7 @@ A validação aceita somente códigos da demonstração, como `DEMO-202610-N-001
 - Projeto Compose: `arquimetria-portal`; contêiner: `arquimetria-portal-db-1`.
 - Volume persistente: `arquimetria-portal_portal_pgdata`.
 - Credenciais: `.env`, ignorado pelo Git e excluído da entrega. Preserve esse arquivo junto com o volume local; regenerar a senha não altera uma base já inicializada.
-- Solicitações, mensagens, eventos, avisos, preferências, liberações e auditoria ficam no PostgreSQL.
+- Solicitações, mensagens, eventos, avisos, preferências, liberações e auditoria ficam no PostgreSQL. Respostas de avaliações, etapas, histórico e bytes dos anexos também usam esse banco e seu volume persistente.
 - Perfil, pagamentos, comprovantes e eventos base são a massa fictícia imutável em `data/demo.json`.
 - Preferências de acessibilidade ficam no navegador; o papel simulado vale para a sessão da aba.
 
@@ -65,6 +65,7 @@ A validação aceita somente códigos da demonstração, como `DEMO-202610-N-001
 ## Estrutura e verificação
 
 - `src/main.rs`: servidor Axum, API local, transações e consultas parametrizadas.
+- `src/evaluations.rs`, `src/evaluation_workflow.rs`: respostas, pontuação, etapas, histórico e anexos de avaliações.
 - `migrations/001_portal.sql`: esquema inicial PostgreSQL.
 - `data/demo.json`: única fonte dos dados fictícios base.
 - `app.js`, `delivery-ui.js`, `workflow-ui.js` e CSS: interface do navegador.
@@ -81,6 +82,7 @@ node tests/workflow.test.mjs
 node tests/feedback.test.mjs
 node tests/contract.test.mjs
 node tests/evaluations.test.mjs
+node tests/evaluation-resources.test.mjs
 ```
 
 O teste de integração precisa do banco local preparado. Ele cria um schema exclusivo, testa os handlers reais com PostgreSQL e o remove ao final, sem alterar as tabelas de demonstração. Testa reconexão, migração idempotente, fluxo de atendimento, documentos, preferências, leitura de avisos, auditoria e limites de acesso aos arquivos.
@@ -154,3 +156,31 @@ Endpoint adicional: `POST /api/evaluations/{id}/preview`, com apenas `answers`. 
 **35 testes passaram:** 8 Rust, incluindo PostgreSQL real em schema isolado, e 27 JavaScript. Clippy, formatação e compilação também passaram. No navegador foram conferidos atualização parcial/completa, memória, seleção de opções e abertura da memória por teclado, ausência de salvamento ao recarregar e persistência após salvar rascunho. A memória foi conferida em 390 pixels; a revisão integral de acessibilidade e dos demais fluxos continua pendente.
 
 Nesta instalação, `demo-eval-5` contém um rascunho fictício com nota 4; uma base nova começa sem respostas. A implementação amplia a demonstração com base nas declarações públicas já registradas, sem alegar equivalência com as regras do RH original.
+
+## Entrega 7 — Anexos e tramitação local
+
+Abra **Avaliações funcionais** e selecione **Avaliação com anexos e fluxo local** (`demo-eval-6`). Este exemplo acrescenta um fluxo próprio da demonstração, sem alterar as etapas dos cinco exemplos anteriores:
+
+1. No papel **Servidor**, preencha o questionário e envie arquivos fictícios pelo formulário de anexos. É possível anexar antes de salvar as respostas; atualizar a lista de anexos preserva o formulário em edição.
+2. Use **Salvar e enviar ao RH (simulado)** e confirme. Respostas e novos anexos ficam bloqueados durante a revisão.
+3. Troque para **RH (simulado)**. Use **Devolver para ajustes**, informando um motivo, ou **Encaminhar para ciência**. A devolução libera o preenchimento novamente, preservando respostas e anexos.
+4. Depois do reenvio e do encaminhamento, volte a **Servidor** e registre concordância ou discordância. Ambas encerram a simulação; a decisão e a observação ficam no histórico.
+5. Consulte anexos e histórico na própria avaliação. Após a conclusão, o relatório HTML inclui etapa, decisão, eventos e nomes dos anexos; os arquivos devem ser baixados separadamente.
+
+As regras por papel são verificadas na API Rust, mas o seletor continua livremente alternável, sem autenticação real. As mudanças de etapa usam a preferência de avisos de atendimento; o sino permite abrir a avaliação correspondente. Rascunhos e inclusão de anexos ficam no histórico/auditoria; downloads registram auditoria local.
+
+**Arquivos:** PDF com cabeçalho `%PDF-` ou TXT válido em UTF-8, não vazio, até **2 MiB**, no máximo **cinco por avaliação**. Extensão e conteúdo básico são verificados no servidor; isso não constitui validação completa de PDF ou análise antimalware. Os bytes são armazenados como `BYTEA` no PostgreSQL, fora do diretório público, e entregues como download com `nosniff`, CSP `sandbox` e nome codificado. O arquivo precisa pertencer à avaliação solicitada. Não há exclusão ou substituição de anexos nesta entrega.
+
+A migração aditiva e idempotente `004_evaluation_workflow.sql` adiciona etapa às respostas e cria tabelas de anexos e eventos. Os dados existentes são preservados. O bloqueio da mesma resposta coordena gravações, limite de anexos e transições. Um exemplo sem tramitação conserva seu fluxo anterior; não é convertido automaticamente.
+
+Novas rotas locais:
+
+- `POST /api/evaluations/{id}/attachments?filename=...`: corpo binário, `Content-Type: application/octet-stream`.
+- `GET /api/evaluations/{id}/attachments/{attachmentId}`: download dos bytes associados à avaliação.
+- `POST /api/evaluations/{id}/workflow`: ação `return`, `approve`, `agree` ou `disagree` e observação. O envio à revisão usa a operação de respostas já existente, com `finalize: true`.
+
+**45 testes passaram:** 10 Rust, incluindo o fluxo real com PostgreSQL em schema isolado, e 35 JavaScript. Clippy, formatação e compilação passaram. Cobertura inclui limites/tipos de anexos, vínculo do download, bytes e cabeçalhos, papéis, saltos de etapa, devolução, reenvio, discordância, bloqueio após conclusão e persistência após reconexão. A interface foi testada por módulos, inclusive preservação das respostas durante upload e recuperação quando o arquivo foi salvo, mas a atualização da lista falhou.
+
+Na API do portal em execução também foram conferidos upload/download idêntico, devolução, reenvio, concordância e conclusão. **A ferramenta do navegador informou acesso desabilitado; não foi realizada conferência visual desta entrega**, nem validação integral em celular/teclado. Os testes anteriores de navegador não aprovam estes novos controles.
+
+Nesta instalação, `demo-eval-6` está concluída por esse teste, com um TXT fictício e seis eventos. Uma base nova começa em preenchimento, sem anexos. O backend permanece em Rust e nenhuma API do portal original foi chamada. Regras oficiais, assinaturas, autenticação de produção e equivalência integral continuam fora desta demonstração.

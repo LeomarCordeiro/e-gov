@@ -16,7 +16,13 @@ function icon(name){return `<svg viewBox="0 0 24 24" aria-hidden="true" fill="no
 function icons(){document.querySelectorAll('[data-icon]').forEach(e=>e.innerHTML=icon(e.dataset.icon));}
 let person, allPayments=[], renderId=0, loaded=12;
 let selected={year:'2026',month:'',kind:''};
-async function api(path,options={}){let role='servidor';try{role=sessionStorage.getItem('arquimetria-demo-role')==='rh'?'rh':'servidor';}catch{}const response=await fetch('/api/'+path,{...options,headers:{'Content-Type':'application/json','X-Demo-Role':role,...options.headers}});const result=await response.json();if(!response.ok){const error=new Error(result.error||'Não foi possível carregar os dados.');error.status=response.status;throw error;}return result;}
+async function api(path,options={}){
+ let role='servidor';try{role=sessionStorage.getItem('arquimetria-demo-role')==='rh'?'rh':'servidor';}catch{}
+ const {responseType,...request}=options;
+ const response=await fetch('/api/'+path,{...request,headers:{'Content-Type':'application/json','X-Demo-Role':role,...request.headers}});
+ if(!response.ok){const result=await response.json();const error=new Error(result.error||'Não foi possível carregar os dados.');error.status=response.status;throw error;}
+ return responseType==='blob'?response.blob():response.json();
+}
 function link(key,label,cls=''){return `<a class="${cls}" href="${paths[key]}" data-route="${key}">${label}</a>`;}
 function serviceLinks(list=services){return list.map(s=>link(s.key,`${icon(s.icon)}<span>${s.name}</span>`,'service-link')).join('');}
 function getRoute(){const url=new URL(location.href);if(url.pathname.endsWith('/solicitacoes'))return 'requests';if(url.pathname.endsWith('/avisos'))return 'notices';if(url.pathname.endsWith('/comparar'))return 'compare';if(url.pathname.endsWith('/documentos'))return 'documents';if(url.pathname.endsWith('/comprovante-rendimento'))return 'income';if(url.pathname.endsWith('/validar-autenticacao-relatorios'))return 'verify';if(url.pathname.includes('/contratos'))return ({movimentacoes:'history',relatorios:'reports',consignacao:'consignments',avaliacoes:'evaluations'})[url.searchParams.get('tab')]||'holerites';return 'home';}
@@ -92,7 +98,7 @@ document.addEventListener('click',async event=>{
 let verificationRequest=0;
 document.addEventListener('input',event=>{if(event.target.id==='verification-code'){verificationRequest++;$('#verify-button').disabled=!event.target.value.trim();$('#verify-result').innerHTML='';}if(event.target.id==='service-search'){const query=normalize(event.target.value);const list=services.filter(s=>normalize(s.name+' '+s.description).includes(query));$('#search-results').innerHTML=list.length?serviceLinks(list):'<p class="muted">Nenhum serviço encontrado.</p>';}});
 document.addEventListener('submit',async event=>{
- if(['evaluation-filter-form','evaluation-answer-form'].includes(event.target.id)){await evaluations.submit(event);return;}
+ if(['evaluation-filter-form','evaluation-answer-form','evaluation-attachment-form'].includes(event.target.id)){await evaluations.submit(event);return;}
  if(event.target.id==='consignment-form'){await contract.submit(event);return;}
  if(workflow.ownsForm(event.target)){event.preventDefault();await workflow.submit(event);return;}
  if(delivery.submit(event))return;
@@ -107,7 +113,7 @@ async function initialize(){try{[person,allPayments]=await Promise.all([api('pro
 const contract=createContractUI({safe,money,date,api,heading,link,icon,modal,toast,download,printableDocument,printDocument,contractSummary,contractTabs});
 const feedback=createFeedback({api,toast});
 const workflow=createWorkflowUI({safe,icon,link,heading,api,modal,toast,download,navigate,render,closeModal,contractSummary,contractTabs,printableDocument,printDocument,getPayments:()=>allPayments});
-const evaluations=createEvaluationsUI({safe,date,api,heading,link,icon,modal,toast,download,printableDocument,render,navigate,closeModal,contractSummary,contractTabs,rolePanel:workflow.rolePanel,refreshBadge:workflow.refreshBadge});
+const evaluations=createEvaluationsUI({safe,date,api,heading,link,icon,modal,toast,download,printableDocument,render,navigate,closeModal,contractSummary,contractTabs,rolePanel:workflow.rolePanel,getRole:workflow.getRole,refreshBadge:workflow.refreshBadge});
 document.addEventListener('change',workflow.change);
 document.addEventListener('change',evaluations.change);
 window.addEventListener('focus',()=>workflow.refreshBadge());
